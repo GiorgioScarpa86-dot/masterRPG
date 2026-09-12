@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cronache Infinite — MasterRPG · Gioco di ruolo narrativo</title>
+<meta name="description" content="Gioco di ruolo narrativo single-player in stile Playable Anime, con Game Master IA, memoria a lungo termine e Token Storia gratuiti.">
+<meta name="theme-color" content="#0b0a14">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="sfondo" aria-hidden="true"></div>
+
+<!-- ══════════════════════ BARRA SUPERIORE ══════════════════════ -->
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-simbolo">✦</span>
+    <span class="brand-testo">Cronache Infinite<small>MasterRPG · Gioco di ruolo narrativo</small></span>
+  </div>
+
+  <div class="topbar-centro">
+    <span id="titolo-saga" class="saga-titolo">Nessuna saga attiva</span>
+    <span id="badge-motore" class="badge" title="Motore narrativo in uso">…</span>
+  </div>
+
+  <nav class="topbar-azioni">
+    <button id="btn-pannello" class="btn ghost" aria-controls="pannello-scheda" aria-expanded="true" title="Mostra o nascondi la Scheda del Personaggio e Storia">📖 <span>Scheda &amp; Storia</span></button>
+    <button id="btn-portafoglio" class="btn wallet" title="Token Storia: apri il portafoglio e le ricariche gratuite">
+      <span class="wallet-icona">🪙</span>
+      <span class="wallet-testo"><strong id="saldo-valore">0</strong><small>Token Storia</small></span>
+    </button>
+    <button id="btn-archivio" class="btn ghost" title="Le tue saghe salvate">🗂 <span>Saghe</span></button>
+    <button id="btn-nuova-saga" class="btn primary" title="Comincia una nuova avventura">✦ <span>Nuova Saga</span></button>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- ══════════════════════ SCHERMATA DI AVVIO / SETUP ══════════════════════ -->
+  <section id="schermata-avvio" class="schermata">
+    <div class="vetrina">
+      <p class="occhiello">Un solo giocatore · Un Game Master instancabile · Nessun pagamento, mai</p>
+      <h1>Le tue storie, capitolo dopo capitolo</h1>
+      <p class="sottotitolo">
+        Scegli un mondo o descrivine uno tuo. L'IA Game Master scrive un capitolo alla volta — con dialoghi,
+        colpi di scena e cliffhanger in stile light novel — mentre la tua <strong>Scheda del Personaggio e Storia</strong>
+        ricorda tutto: inventario, relazioni, obiettivi e sinossi.
+      </p>
+      <ul class="punti-chiave">
+        <li><strong>3–4 scelte rapide</strong> a ogni capitolo, oppure la tua <em>Azione Personalizzata</em>.</li>
+        <li><strong>1000 Token Storia</strong> in regalo al primo avvio e ricariche gratuite illimitate.</li>
+        <li><strong>Zero blocchi:</strong> se i crediti finiscono, si ricaricano gratis in un clic.</li>
+      </ul>
+    </div>
+
+    <form id="form-nuova-saga" class="card setup" novalidate>
+      <h2><span class="passo">1</span> L'ambientazione</h2>
+      <div id="griglia-ambientazioni" class="griglia-ambientazioni" role="radiogroup" aria-label="Scegli l'ambientazione"></div>
+
+      <div id="blocco-personalizzata" class="nascosto">
+        <label class="etichetta" for="testo-ambientazione">Descrivi il tuo mondo <span class="aiuto">(bastano due frasi: il Game Master seguirà la tua premessa)</span></label>
+        <textarea id="testo-ambientazione" rows="4" maxlength="600"
+          placeholder="Esempio: una città sospesa tra le nuvole dove i ricordi si comprano al mercato, e io sono l'unico a non averne mai venduto uno."></textarea>
+        <p class="contatore"><span id="conteggio-ambientazione">0</span>/600 caratteri · minimo 20</p>
+      </div>
+
+      <h2><span class="passo">2</span> Il protagonista</h2>
+      <div class="riga-campi">
+        <div class="campo">
+          <label class="etichetta" for="nome-protagonista">Nome</label>
+          <div class="campo-con-bottone">
+            <input id="nome-protagonista" type="text" maxlength="24" placeholder="Rei" autocomplete="off">
+            <button type="button" id="btn-nome-casuale" class="btn mini" title="Suggerisci un nome in stile anime">🎲</button>
+          </div>
+        </div>
+        <div class="campo">
+          <label class="etichetta" for="archetipo-protagonista">Archetipo</label>
+          <select id="archetipo-protagonista"></select>
+        </div>
+        <div class="campo">
+          <label class="etichetta" for="tratto-protagonista">Tratto distintivo</label>
+          <select id="tratto-protagonista"></select>
+        </div>
+      </div>
+
+      <h2><span class="passo">3</span> Il tono della storia</h2>
+      <div id="griglia-toni" class="griglia-toni" role="radiogroup" aria-label="Tono narrativo"></div>
+
+      <h2><span class="passo">4</span> Il titolo della saga <span class="aiuto">(facoltativo)</span></h2>
+      <input id="titolo-saga-input" type="text" maxlength="80" placeholder="Le Cronache di Rei" autocomplete="off">
+
+      <div class="riepilogo-crediti">
+        <span class="wallet-icona">🪙</span>
+        <div>
+          <strong>Bonus di benvenuto: 1000 Token Storia</strong>
+          <small>Ogni capitolo costa 10. Le ricariche gratuite sono sempre disponibili: qui non si paga nulla.</small>
+        </div>
+      </div>
+
+      <div class="azioni-form">
+        <button type="submit" class="btn primary grande">Inizia la saga ✦</button>
+        <button type="button" id="btn-continua-saga" class="btn ghost grande nascosto">Continua l'ultima saga</button>
+      </div>
+      <p id="errore-setup" class="errore nascosto" role="alert"></p>
+    </form>
+  </section>
+
+  <!-- ══════════════════════ SCHERMATA DI GIOCO ══════════════════════ -->
+  <section id="schermata-gioco" class="schermata nascosto">
+    <div class="layout">
+
+      <!-- ── Colonna di lettura ── -->
+      <div class="colonna-lettura">
+        <div id="intestazione-saga" class="intestazione-saga"></div>
+
+        <article id="capitolo-corrente" class="capitolo card" aria-live="polite"></article>
+
+        <section id="striscia-illustrazioni" class="striscia-illustrazioni nascosto" aria-label="Illustrazioni del capitolo"></section>
+
+        <section id="blocco-proemio" class="azione-libera card nascosto">
+          <div class="proemio-invito">
+            <h3 class="titolo-blocco">Inizio della saga</h3>
+            <p class="aiuto-blocco">Il primo capitolo è il <strong>proemio</strong>: il Game Master presenta il tuo protagonista, il mondo e il primo personaggio che incontrerai. Non serve scrivere nulla — oppure puoi già indicare come vuoi che cominci.</p>
+            <div class="azione-libera-piede">
+              <button id="btn-proemio" class="btn primary grande">✍ Scrivi il proemio <span class="costo">−10 Token Storia</span></button>
+              <span class="contatore">Puoi anche scrivere la tua prima azione nel campo qui sotto.</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="blocco-scelte" class="blocco-scelte nascosto" aria-label="Scelte rapide">
+          <h3 class="titolo-sezione">Cosa fai adesso?</h3>
+          <div id="scelte" class="scelte"></div>
+        </section>
+
+        <section id="blocco-azione-libera" class="azione-libera card nascosto">
+          <label class="etichetta" for="azione-personalizzata">Azione Personalizzata <span class="aiuto">— scrivi liberamente cosa fa il tuo personaggio</span></label>
+          <textarea id="azione-personalizzata" rows="3" maxlength="400" placeholder="Esempio: fingo di accettare il patto, ma nascondo il frammento nel risvolto del mantello…"></textarea>
+          <div class="azione-libera-piede">
+            <span class="contatore"><span id="conteggio-azione">0</span>/400 · Invio per inviare, Maiusc+Invio per andare a capo</span>
+            <div class="azione-libera-bottoni">
+              <button id="btn-genera" class="btn primary" disabled>Genera capitolo <span class="costo">−10 Token Storia</span></button>
+            </div>
+          </div>
+        </section>
+
+        <div id="area-attesa" class="area-attesa nascosto" role="status">
+          <div class="penna-animata"><span></span><span></span><span></span></div>
+          <p id="messaggio-attesa">Il Game Master sta scrivendo il capitolo…</p>
+        </div>
+
+
+      </div>
+
+      <!-- ── Pannello laterale: Scheda · Relazioni · Cronaca ── -->
+      <aside id="pannello-scheda" class="pannello card" aria-label="Scheda del Personaggio e Storia">
+        <header class="pannello-intestazione">
+          <h2>Scheda del Personaggio e Storia</h2>
+          <button id="btn-chiudi-pannello" class="btn mini ghost" title="Chiudi il pannello">✕</button>
+        </header>
+
+        <nav class="schede-pannello" role="tablist" aria-label="Sezioni del pannello">
+          <button class="scheda-tab attiva" role="tab" aria-selected="true" data-scheda="personaggio">Personaggio</button>
+          <button class="scheda-tab" role="tab" aria-selected="false" data-scheda="relazioni">Relazioni</button>
+          <button class="scheda-tab" role="tab" aria-selected="false" data-scheda="cronaca">Cronaca</button>
+        </nav>
+
+        <!-- ═ Scheda: personaggio ═ -->
+        <div class="contenuto-scheda" id="vista-personaggio">
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Protagonista</h3>
+            <div class="protagonista">
+              <div class="avatar" id="scheda-avatar">?</div>
+              <div>
+                <p class="nome" id="scheda-nome">—</p>
+                <p class="ruolo" id="scheda-archetipo">—</p>
+                <p class="tratto" id="scheda-tratto">—</p>
+              </div>
+            </div>
+            <div class="vitali" id="scheda-vitali"></div>
+            <p class="luogo-attuale"><span id="scheda-luogo">—</span> · <span id="scheda-arco">—</span></p>
+          </section>
+
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Inventario <span class="contatore-capitoli" id="conteggio-inventario"></span></h3>
+            <ul id="scheda-inventario" class="lista-oggetti"></ul>
+          </section>
+
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Obiettivi</h3>
+            <ul id="scheda-obiettivi" class="lista-obiettivi"></ul>
+          </section>
+        </div>
+
+        <!-- ═ Scheda: albero di fiducia ═ -->
+        <div class="contenuto-scheda nascosto" id="vista-relazioni">
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Albero di fiducia</h3>
+            <p class="aiuto-blocco piccolo">
+              Ogni NPC ha tre assi: <strong>Vincolo</strong> (quanto vi lega),
+              <strong>Tensione</strong> (quanto è conflittuale) e <strong>Rispetto</strong> (quanto ti stima).
+              Trascina lo sguardo dal tuo punto di partenza: le frecce mostrano come si è mosso il rapporto nell'ultimo capitolo.
+            </p>
+            <div id="albero-relazioni" class="albero-contenitore"></div>
+          </section>
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Elenco rapido</h3>
+            <ul id="lista-relazioni-rapida" class="lista-relazioni"></ul>
+          </section>
+        </div>
+
+        <!-- ═ Scheda: cronaca ═ -->
+        <div class="contenuto-scheda nascosto" id="vista-cronaca">
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Sinossi dei capitoli</h3>
+            <ol id="scheda-sinossi" class="lista-sinossi"></ol>
+          </section>
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Diario <span class="contatore-capitoli" id="conteggio-capitoli"></span></h3>
+            <div id="elenco-capitoli" class="elenco-capitoli"></div>
+            <button id="btn-esporta" class="btn ghost">⬇ Esporta il romanzo in Markdown</button>
+          </section>
+        </div>
+
+        <footer class="pannello-piede">
+          <button id="btn-memoria-iniettata" class="btn ghost piccolo">🧠 Memoria iniettata</button>
+          <button id="btn-ricarica-rapida" class="btn ghost piccolo">🪙 Ricarica rapida</button>
+          <button id="btn-galleria" class="btn ghost piccolo">🖼 Illustrazioni</button>
+          <button id="btn-parere" class="btn ghost piccolo">📝 Lascia un parere</button>
+          <button id="btn-riepilogo" class="btn ghost piccolo">📊 Riepilogo playtest</button>
+        </footer>
+      </aside>
+      </div>
+    </section>
+  </main>
+
+<!-- ══════════════════════ MODALE: PORTAFOGLIO / RICARICA RAPIDA ══════════════════════ -->
+<div id="modale-portafoglio" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-portafoglio">
+  <div class="modale-contenuto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-portafoglio">Portafoglio · Token Storia</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-portafoglio">✕</button>
+    </header>
+
+    <div class="saldo-grande">
+      <span id="portafoglio-saldo">0</span>
+      <small>Token Storia disponibili</small>
+      <p id="portafoglio-capitoli" class="nota-saldo"></p>
+    </div>
+
+    <div id="opzioni-ricarica" class="opzioni-ricarica"></div>
+
+    <h3 class="titolo-blocco">Missioni giornaliere</h3>
+    <p class="aiuto-blocco">Il pulsante “Ottieni 500 Crediti Gratuiti” simula il completamento di una missione o la visione di uno spot fittizio. Nessun annuncio reale, nessun pagamento vero, nessun limite che ti blocchi.</p>
+    <button id="btn-ricarica-principale" class="btn primary grande largo">🪙 Ottieni 500 Crediti Gratuiti</button>
+
+    <h3 class="titolo-blocco">Estratto conto</h3>
+    <ul id="elenco-movimenti" class="elenco-movimenti"></ul>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: MEMORIA INIETTATA ══════════════════════ -->
+<div id="modale-memoria" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-memoria">
+  <div class="modale-contenuto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-memoria">Memoria iniettata nel Game Master</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-memoria">✕</button>
+    </header>
+    <p class="aiuto-blocco">
+      Questo è il testo esatto che viene inviato all'IA prima di ogni capitolo: è il meccanismo che impedisce
+      perdite di memoria e contraddizioni nella trama. Aggiornato automaticamente a ogni capitolo.
+    </p>
+    <pre id="testo-memoria" class="testo-memoria"></pre>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: ARCHIVIO SAGHE ══════════════════════ -->
+<div id="modale-archivio" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-archivio">
+  <div class="modale-contenuto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-archivio">Le tue saghe</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-archivio">✕</button>
+    </header>
+    <div id="elenco-saghe" class="elenco-saghe"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: LETTURA CAPITOLO PASSATO ══════════════════════ -->
+<div id="modale-capitolo" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-capitolo-modale">
+  <div class="modale-contenuto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-capitolo-modale">Capitolo</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-capitolo">✕</button>
+    </header>
+    <div id="testo-capitolo-modale" class="testo-capitolo-modale"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: PARERE DEL GIOCATORE (playtest) ══════════════════════ -->
+<div id="modale-parere" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-parere">
+  <div class="modale-contenuto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-parere">Come sta andando?</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-parere">✕</button>
+    </header>
+    <p class="aiuto-blocco" id="parere-origine">Raccontaci com'è andata: serve a migliorare il gioco.</p>
+
+    <div class="campo">
+      <span class="etichetta">Quanto ti sta piacendo? <span id="parere-voto-etichetta">Tocca le stelle</span></span>
+      <div id="parere-voto" class="parere-stelle" role="group" aria-label="Voto da 1 a 5 stelle"></div>
+    </div>
+
+    <div class="campo">
+      <label class="etichetta" for="parere-chiarezza">Ti è chiaro che cosa devi fare?</label>
+      <select id="parere-chiarezza" class="input-testo">
+        <option value="">— scegli —</option>
+        <option value="sempre chiaro">Sì, sempre chiaro</option>
+        <option value="a volte incerto">A volte non capivo cosa fare</option>
+        <option value="spesso confuso">Spesso ero confuso</option>
+      </select>
+    </div>
+
+    <div class="campo">
+      <label class="etichetta" for="parere-piace">Che cosa ti è piaciuto di più?</label>
+      <input id="parere-piace" class="input-testo" maxlength="300" placeholder="La storia, le scelte, le immagini…">
+    </div>
+
+    <div class="campo">
+      <label class="etichetta" for="parere-confusione">Che cosa ti ha confuso o rallentato?</label>
+      <input id="parere-confusione" class="input-testo" maxlength="300" placeholder="Qualcosa che non funzionava o non si capiva…">
+    </div>
+
+    <div class="campo">
+      <label class="etichetta" for="parere-commento">Un commento libero</label>
+      <textarea id="parere-commento" class="input-testo" rows="3" maxlength="400"></textarea>
+    </div>
+
+    <button id="btn-invia-parere" class="btn primary">Invia il parere</button>
+    <p class="aiuto-blocco piccolo">Nessun dato personale: il parere resta in locale, sul computer del facilitatore.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: RIEPILOGO PLAYTEST ══════════════════════ -->
+<div id="modale-riepilogo" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-riepilogo">
+  <div class="modale-contenuto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-riepilogo">Riepilogo del playtest</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-riepilogo">✕</button>
+    </header>
+    <div id="contenuto-riepilogo" class="contenuto-npc"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: GALLERIA ILLUSTRAZIONI ══════════════════════ -->
+<div id="modale-galleria" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-galleria">
+  <div class="modale-contenuto larga">
+    <header class="modale-intestazione">
+      <h2 id="titolo-galleria">Illustrazioni del capitolo</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-galleria">✕</button>
+    </header>
+    <div id="contenuto-galleria" class="contenuto-galleria"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: SCHEDA NPC (albero di fiducia) ══════════════════════ -->
+<div id="modale-npc" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-npc">
+  <div class="modale-contenuto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-npc">Personaggio</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-npc">✕</button>
+    </header>
+    <div id="contenuto-npc" class="contenuto-npc"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: SCELTA DI AZIONE (battuta) ══════════════════════ -->
+<div id="modale-conferma" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-conferma">
+  <div class="modale-contenuto stretto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-conferma">Sei sicuro?</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-conferma">✕</button>
+    </header>
+    <p id="testo-conferma"></p>
+    <div class="azioni-modale">
+      <button id="btn-conferma-si" class="btn primary">Conferma</button>
+      <button class="btn ghost chiudi-modale" data-chiudi="modale-conferma">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
