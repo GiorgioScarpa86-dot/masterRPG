@@ -5,6 +5,7 @@
 
 import { AMBIENTAZIONI } from "../motore/lessico.js";
 import { portafoglioIniziale } from "../crediti/portafoglio.js";
+import { applicaAssi, quadrante, TAPPE } from "./relazioni.js";
 
 export const COSTO_CAPITOLO = 10;
 export const BONUS_BENVENUTO = 1000;
@@ -195,19 +196,60 @@ export function applicaDelta(stato, delta = {}) {
     if (!relazione?.npc) continue;
     const nome = String(relazione.npc).slice(0, 40);
     const indice = stato.relazioni.findIndex((r) => r.npc.toLowerCase() === nome.toLowerCase());
-    const voce = {
-      npc: nome,
-      ruolo: relazione.ruolo || "Conoscente",
-      fiducia: limita(relazione.fiducia, 0, 100, 50),
-      nota: String(relazione.nota || "").slice(0, 220),
-      aspetto: String(relazione.aspetto || "").slice(0, 120),
-      tic: String(relazione.tic || "").slice(0, 120),
-      ultimoIncontro: relazione.ultimoIncontro ?? stato.capitolo + 1
-    };
+
     if (indice >= 0) {
-      stato.relazioni[indice] = { ...stato.relazioni[indice], ...voce };
+      // Relazione esistente: si aggiornano gli assi in modo incrementale
+      const esistente = stato.relazioni[indice];
+      const variazione = {
+        vincolo: Number(relazione.deltaVincolo ?? 0),
+        tensione: Number(relazione.deltaTensione ?? 0),
+        rispetto: Number(relazione.deltaRispetto ?? 0)
+      };
+      applicaAssi(esistente, variazione, relazione.ultimoIncontro ?? stato.capitolo + 1);
+
+      // Il modello può forzare valori assoluti (se li ha indicati esplicitamente)
+      if (relazione.vincoloAssoluto !== undefined) esistente.vincolo = limita(relazione.vincoloAssoluto, 0, 100, esistente.vincolo);
+      if (relazione.tensioneAssoluta !== undefined) esistente.tensione = limita(relazione.tensioneAssoluta, 0, 100, esistente.tensione);
+      if (relazione.rispettoAssoluto !== undefined) esistente.rispetto = limita(relazione.rispettoAssoluto, 0, 100, esistente.rispetto);
+      esistente.fiducia = esistente.vincolo;
+      esistente.quadrante = quadrante(esistente).id;
+
+      if (relazione.ruolo && relazione.ruolo !== esistente.ruolo && relazione.ruoloForzato) esistente.ruolo = relazione.ruolo;
+      if (relazione.nota) esistente.nota = String(relazione.nota).slice(0, 220);
+      if (relazione.aspetto) esistente.aspetto = String(relazione.aspetto).slice(0, 120);
+      if (relazione.tic) esistente.tic = String(relazione.tic).slice(0, 120);
+      esistente.ultimoIncontro = relazione.ultimoIncontro ?? stato.capitolo + 1;
+
+      // Tappa esplicita richiesta dal narratore
+      if (relazione.tappa) aggiungiTappa(esistente, relazione.tappa, esistente.ultimoIncontro);
     } else {
+      // Prima apparizione: si parte dal centro dei quattro quadranti
+      const voce = {
+        npc: nome,
+        ruolo: relazione.ruolo || "Conoscente",
+        vincolo: limita(relazione.deltaVincolo !== undefined ? 50 + Number(relazione.deltaVincolo) : relazione.vincolo ?? relazione.fiducia, 0, 100, 50),
+        tensione: limita(relazione.deltaTensione !== undefined ? 30 + Number(relazione.deltaTensione) : relazione.tensione, 0, 100, 30),
+        rispetto: limita(relazione.deltaRispetto !== undefined ? 50 + Number(relazione.deltaRispetto) : relazione.rispetto, 0, 100, 50),
+        nota: String(relazione.nota || "").slice(0, 220),
+        aspetto: String(relazione.aspetto || "").slice(0, 120),
+        tic: String(relazione.tic || "").slice(0, 120),
+        ultimoIncontro: relazione.ultimoIncontro ?? stato.capitolo + 1,
+        // Prima riga dello storico: i valori di partenza del rapporto
+        storico: [{
+          capitolo: relazione.ultimoIncontro ?? stato.capitolo + 1,
+          vincolo: 0,
+          tensione: 0,
+          rispetto: 0,
+          iniziale: true
+        }],
+        tappe: []
+      };
+      voce.fiducia = voce.vincolo;
+      voce.quadrante = quadrante(voce).id;
       stato.relazioni.push(voce);
+      // Prima tappa obbligatoria: l'incontro
+      aggiungiTappa(voce, "primo-incontro", voce.ultimoIncontro);
+      if (relazione.tappa) aggiungiTappa(voce, relazione.tappa, voce.ultimoIncontro);
     }
   }
 
@@ -243,6 +285,16 @@ export function applicaDelta(stato, delta = {}) {
   }
 
   return stato;
+}
+
+/** Aggiunge una tappa al legame, evitando duplicati. */
+export function aggiungiTappa(relazione, idTappa, capitolo) {
+  const tappa = TAPPE.find((t) => t.id === idTappa);
+  if (!tappa) return relazione;
+  relazione.tappe = relazione.tappe || [];
+  if (relazione.tappe.some((t) => t.id === tappa.id)) return relazione;
+  relazione.tappe.push({ ...tappa, capitolo });
+  return relazione;
 }
 
 /** Aggiorna gli obiettivi marcandoli come chiusi (usato dal narratore su richiesta dell'IA). */

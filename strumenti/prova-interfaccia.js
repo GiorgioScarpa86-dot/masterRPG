@@ -209,7 +209,100 @@ verifica(sbilanciati === 0, "le virgolette dei dialoghi sono sempre bilanciate")
 verifica(capitoli.every((c) => c.opzioni.length >= 3 && c.opzioni.length <= 4), "ogni capitolo offre 3 o 4 scelte rapide");
 verifica(capitoli.every((c) => c.testo.trim().length > 400), "nessun capitolo è troncato o vuoto");
 
-console.log("\n═══ 12. Errori JavaScript ═══");
+
+console.log("\n═══ 12. Illustrazioni di scena ═══");
+{
+  const scene = $$("#striscia-illustrazioni .scena-card");
+  verifica(scene.length === 5, `la striscia mostra 5 illustrazioni (trovate ${scene.length})`);
+  verifica(!$("#striscia-illustrazioni").classList.contains("nascosto"), "la striscia delle illustrazioni è visibile sotto il capitolo");
+  const immagini = $$("#striscia-illustrazioni img");
+  verifica(immagini.every((img) => /^\/api\/partite\/.+\/illustrazioni\/\d+\/\d+$/.test(img.getAttribute("src"))), "gli indirizzi delle scene sono corretti");
+  verifica(immagini.every((img) => (img.getAttribute("alt") || "").length > 5), "ogni scena ha un testo alternativo descrittivo");
+  verifica(immagini.slice(1).every((img) => img.getAttribute("loading") === "lazy"), "le scene non visibili si caricano in modo differito");
+
+  // La prima scena si apre nella galleria
+  scene[0].click();
+  await attendi(400);
+  verifica(!$("#modale-galleria").classList.contains("nascosto"), "la galleria si apre toccando una scena");
+  const indirizzo = $("#contenuto-galleria .galleria-immagine")?.getAttribute("src") || "";
+  verifica(/\/illustrazioni\/\d+\/0$/.test(indirizzo), `la galleria mostra la scena scelta (${indirizzo.split("/").slice(-2).join("/")})`);
+  verifica(($("#contenuto-galleria .galleria-didascalia")?.textContent || "").length > 5, "la galleria mostra la didascalia della scena");
+  verifica($$("#contenuto-galleria .miniatura").length === 5, "la galleria offre le miniature di tutte e cinque le scene");
+
+  // Navigazione avanti e indietro
+  const avanti = $$("#contenuto-galleria .galleria-navigazione .btn").at(-1);
+  avanti.click();
+  await attendi(250);
+  verifica(/\/illustrazioni\/\d+\/1$/.test($("#contenuto-galleria .galleria-immagine").getAttribute("src")), "il pulsante «Successiva» cambia scena");
+  const indietro = $$("#contenuto-galleria .galleria-navigazione .btn")[0];
+  indietro.click();
+  await attendi(250);
+  verifica(/\/illustrazioni\/\d+\/0$/.test($("#contenuto-galleria .galleria-immagine").getAttribute("src")), "il pulsante «Precedente» torna indietro");
+  verifica($$("#contenuto-galleria .miniatura.attiva").length === 1, "la miniatura attiva è evidenziata");
+  $("[data-chiudi='modale-galleria']").click();
+  await attendi(200);
+  verifica($("#modale-galleria").classList.contains("nascosto"), "la galleria si chiude");
+
+  // Il pulsante del pannello apre la galleria del capitolo corrente
+  $("#btn-galleria").click();
+  await attendi(700);
+  verifica(!$("#modale-galleria").classList.contains("nascosto"), "il pulsante «Illustrazioni» apre la galleria");
+  $("[data-chiudi='modale-galleria']").click();
+  await attendi(200);
+
+  // Le illustrazioni dei capitoli precedenti, dal diario
+  const voceCapitolo = $("#elenco-capitoli .voce-capitolo-immagini");
+  verifica(Boolean(voceCapitolo), "ogni voce del diario offre le illustrazioni del capitolo");
+}
+
+console.log("\n═══ 13. Albero di fiducia (pannello) ═══");
+{
+  const tabRelazioni = $(".scheda-tab[data-scheda='relazioni']");
+  verifica(Boolean(tabRelazioni), "il pannello ha la scheda «Relazioni»");
+  tabRelazioni.click();
+  await attendi(200);
+  verifica(!$("#vista-relazioni").classList.contains("nascosto"), "la scheda Relazioni diventa visibile");
+  verifica($("#vista-personaggio").classList.contains("nascosto"), "le altre schede vengono nascoste");
+
+  const nodi = $$("#albero-relazioni .nodo-albero");
+  verifica(nodi.length >= 1, `l'albero disegna ${nodi.length} nodi`);
+  verifica(Boolean($("#albero-relazioni .albero-svg")), "l'albero è disegnato come SVG (scala su ogni schermo)");
+  verifica($$("#albero-relazioni .voce-legenda").length === 4, "la legenda elenca i quattro quadranti");
+  const etichette = $("#albero-relazioni .albero-svg").textContent;
+  for (const quadrante of ["Alleanza", "Rivalità", "Crocevia", "Ostilità"]) {
+    verifica(etichette.includes(quadrante), `il piano indica il quadrante «${quadrante}»`);
+  }
+  verifica(etichette.includes("VINCOLO") && etichette.includes("TENSIONE"), "gli assi del piano sono etichettati");
+
+  // La scheda rapida di un NPC
+  verifica($$("#lista-relazioni-rapida .relazione").length >= 1, "l'elenco rapido mostra i legami");
+  // I nodi dell'albero sono elementi SVG: si simulano gli eventi del puntatore
+  // (su un dispositivo vero tocco e mouse generano gli stessi eventi).
+  nodi[0].dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
+  await attendi(250);
+  verifica(!$("#modale-npc").classList.contains("nascosto"), "toccando un nodo si apre la scheda dell'NPC");
+  verifica(($("#titolo-npc").textContent || "").length > 1, `la scheda è intestata a ${$("#titolo-npc").textContent}`);
+  verifica(Boolean($("#contenuto-npc .radar-svg")), "la scheda mostra il grafico a tre punte degli assi");
+  const testoNpc = $("#contenuto-npc").textContent;
+  for (const asse of ["Vincolo", "Tensione", "Rispetto"]) {
+    verifica(testoNpc.includes(asse), `la scheda riporta l'asse ${asse}`);
+  }
+  verifica($$("#contenuto-npc .npc-tappe li").length >= 1, "la scheda elenca le tappe del legame");
+  verifica($$("#contenuto-npc .storico-riga").length >= 1, "la scheda mostra lo storico delle variazioni");
+  $("[data-chiudi='modale-npc']").click();
+  await attendi(200);
+  verifica($("#modale-npc").classList.contains("nascosto"), "la scheda dell'NPC si chiude");
+
+  // La scelta della scheda viene ricordata
+  const tabCronaca = $(".scheda-tab[data-scheda='cronaca']");
+  tabCronaca.click();
+  await attendi(150);
+  verifica(window.localStorage.getItem("masterrpg.scheda") === "cronaca", "la scheda scelta viene ricordata fra una sessione e l'altra");
+  verifica(!$("#vista-cronaca").classList.contains("nascosto"), "la scheda Cronaca mostra diario e sinossi");
+  $(".scheda-tab[data-scheda='personaggio']").click();
+}
+
+console.log("\n═══ 14. Errori JavaScript ═══");
 verifica(errori.length === 0, errori.length ? `errori rilevati: ${errori.join(" | ")}` : "nessun errore JavaScript durante l'intero flusso");
 
 if (errori.length) {

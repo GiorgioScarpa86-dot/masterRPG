@@ -9,6 +9,8 @@
  *     "Scheda del Personaggio e Storia".
  */
 
+import { quadrante } from "./relazioni.js";
+
 const MAX_SINOSSI_DETTAGLIATA = 8;      // capitoli tenuti per esteso nella sinossi
 const MAX_CARATTERI_VOCE = 240;        // lunghezza massima di una voce di sinossi
 const MAX_PAROLE_RIASSUNTO_ANTICO = 150; // il riassunto compresso non cresce mai oltre
@@ -87,12 +89,16 @@ export function digest(partita) {
     }
   }
 
-  righe.push("=== RELAZIONI CON GLI NPC ===");
+  righe.push("=== ALBERO DI FIDUCIA — RELAZIONI CON GLI NPC (assi: Vincolo / Tensione / Rispetto) ===");
   if (!stato.relazioni.length) {
     righe.push("  - (nessun NPC incontrato finora)");
   } else {
     for (const r of stato.relazioni) {
-      righe.push(`  - ${r.npc} — ${r.ruolo} · fiducia ${r.fiducia}/100 · ${r.nota || "nessuna nota"}`);
+      const q = quadrante(r);
+      const tappe = (r.tappe || []).slice(-2).map((t) => `${t.nome} (cap. ${t.capitolo})`).join(", ");
+      righe.push(`  - ${r.npc} — ${r.ruolo} · ${q.nome} · Vincolo ${r.vincolo ?? r.fiducia ?? 50} / Tensione ${r.tensione ?? 30} / Rispetto ${r.rispetto ?? 50}`);
+      if (r.nota) righe.push(`      nota: ${r.nota}`);
+      if (tappe) righe.push(`      tappe: ${tappe}`);
     }
   }
 

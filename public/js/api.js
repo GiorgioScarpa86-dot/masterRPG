@@ -58,6 +58,12 @@ export const api = {
   generaCapitolo: (id, azione) => richiesta(`/api/partite/${encodeURIComponent(id)}/capitolo`, { metodo: "POST", corpo: azione || {} }),
   ricarica: (id, modalita) => richiesta(`/api/partite/${encodeURIComponent(id)}/ricarica`, { metodo: "POST", corpo: { modalita } }),
   memoria: (id) => richiesta(`/api/partite/${encodeURIComponent(id)}/memoria`),
+  albero: (id) => richiesta(`/api/partite/${encodeURIComponent(id)}/albero`),
+  illustrazioni: (id, capitolo) => richiesta(`/api/partite/${encodeURIComponent(id)}/illustrazioni/${capitolo}`),
+  illustrazioniDi: (id, capitolo, indice) => richiesta(`/api/partite/${encodeURIComponent(id)}/illustrazioni/${capitolo}/${indice}`),
+  promptIllustrazione: (id, capitolo, indice) => richiesta(`/api/partite/${encodeURIComponent(id)}/illustrazioni/${capitolo}/${indice}/prompt`),
   elimina: (id) => richiesta(`/api/partite/${encodeURIComponent(id)}`, { metodo: "DELETE" }),
-  urlEsporta: (id) => `/api/partite/${encodeURIComponent(id)}/esporta`
+  urlEsporta: (id) => `/api/partite/${encodeURIComponent(id)}/esporta`,
+  eventoPlaytest: (dati) => richiesta("/api/playtest/evento", { metodo: "POST", corpo: dati }),
+  riepilogoPlaytest: (data) => richiesta(`/api/playtest/riepilogo${data ? `?data=${encodeURIComponent(data)}` : ""}`)
 };

@@ -115,15 +115,39 @@ export function normalizzaDelta(delta = {}) {
     .filter(Boolean)
     .slice(0, 3);
 
+  // ⚠ I tre assi dell'albero di fiducia devono sopravvivere alla
+  // normalizzazione: i delta vengono conservati come variazioni, i valori
+  // assoluti solo se il narratore li ha indicati esplicitamente.
   const relazioni = (Array.isArray(d.relazioni) ? d.relazioni : [])
-    .map((r) => ({
-      npc: stringaPulita(r?.npc || r?.nome, 40),
-      ruolo: RUOLI.includes(r?.ruolo) ? r.ruolo : (RUOLI.includes(String(r?.ruolo || "")) ? String(r.ruolo) : "Conoscente"),
-      fiducia: limita(r?.fiducia, 0, 100, 50),
-      nota: stringaPulita(r?.nota, 220),
-      aspetto: stringaPulita(r?.aspetto, 120),
-      tic: stringaPulita(r?.tic, 120)
-    }))
+    .map((r) => {
+      const deltaVincolo = r?.deltaVincolo !== undefined ? limita(r.deltaVincolo, -40, 40, 0) : undefined;
+      const deltaTensione = r?.deltaTensione !== undefined ? limita(r.deltaTensione, -40, 40, 0) : undefined;
+      const deltaRispetto = r?.deltaRispetto !== undefined ? limita(r.deltaRispetto, -40, 40, 0) : undefined;
+      const haAssiAssoluti = r?.vincolo !== undefined || r?.tensione !== undefined || r?.rispetto !== undefined;
+      const senzaDelta = deltaVincolo === undefined && deltaTensione === undefined && deltaRispetto === undefined;
+
+      return {
+        npc: stringaPulita(r?.npc || r?.nome, 40),
+        ruolo: RUOLI.includes(r?.ruolo) ? r.ruolo : (RUOLI.includes(String(r?.ruolo || "")) ? String(r.ruolo) : "Conoscente"),
+        nota: stringaPulita(r?.nota, 220),
+        aspetto: stringaPulita(r?.aspetto, 120),
+        tic: stringaPulita(r?.tic, 120),
+        tappa: stringaPulita(r?.tappa, 40) || null,
+        ...(deltaVincolo !== undefined ? { deltaVincolo } : {}),
+        ...(deltaTensione !== undefined ? { deltaTensione } : {}),
+        ...(deltaRispetto !== undefined ? { deltaRispetto } : {}),
+        // Valori assoluti (o "fiducia" legacy interpretata come vincolo assoluto)
+        ...(haAssiAssoluti
+          ? {
+              vincoloAssoluto: limita(r.vincolo, 0, 100, 50),
+              tensioneAssoluta: limita(r.tensione, 0, 100, 30),
+              rispettoAssoluto: limita(r.rispetto, 0, 100, 50)
+            }
+          : senzaDelta && r?.fiducia !== undefined
+            ? { vincoloAssoluto: limita(r.fiducia, 0, 100, 50) }
+            : {})
+      };
+    })
     .filter((r) => r.npc.length > 1)
     .slice(0, 4);
 

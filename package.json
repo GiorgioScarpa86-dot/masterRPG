@@ -1,17 +1,23 @@
 {
   "name": "masterrpg",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "MasterRPG / Cronache Infinite — gioco di ruolo narrativo single-player in stile Playable Anime, interamente in italiano. Zero dipendenze.",
+  "description": "MasterRPG / Cronache Infinite — gioco di ruolo narrativo single-player in stile Playable Anime, interamente in italiano: capitoli generati al momento, illustrazioni di scena, albero di fiducia e memoria a lungo termine. Zero dipendenze, pronto per il playtest.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
+    "playtest": "node strumenti/avvia-playtest.js",
+    "playtest:riepilogo": "node strumenti/riepilogo-playtest.js",
     "prova": "node strumenti/prova-motore.js 100",
+    "prova:motore": "node strumenti/prova-motore.js 150",
+    "prova:illustrazioni": "node strumenti/prova-illustrazioni.js",
+    "prova:mobile": "node strumenti/prova-mobile.js",
     "prova:interfaccia": "node strumenti/prova-interfaccia.js",
     "prova:anticrisi": "node strumenti/prova-anticrisi.js",
-    "verifica": "node strumenti/verifica-html.js"
+    "verifica": "node strumenti/verifica-html.js",
+    "collaudo": "npm run verifica && npm run prova:mobile && npm run prova:illustrazioni && npm run prova:motore && npm run prova:anticrisi && npm run prova:interfaccia"
   },
   "engines": {
     "node": ">=18"
@@ -22,7 +28,9 @@
     "light-novel",
     "anime",
     "single-player",
-    "italiano"
+    "italiano",
+    "playtest",
+    "illustrazioni"
   ],
   "license": "MIT"
 }

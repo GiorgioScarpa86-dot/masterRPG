@@ -11,7 +11,10 @@ import { digest, scheda } from "./stato/memoria.js";
 import { statoRicariche, ricarica, VALUTA, BONUS_BENVENUTO, MISSIONI_AL_GIORNO } from "./crediti/portafoglio.js";
 import { generaCapitoloNarrativo, ErroreGioco, modalitaMotore } from "./motore/narratore.js";
 import { AMBIENTAZIONI, ARCHETIPI, TRATTI, NOMI_SUGGERITI } from "./motore/lessico.js";
+import { albero as alberoRelazioni, ASSI, QUADRANTI, TAPPE } from "./stato/relazioni.js";
+import { descriviIllustrazioni, generaScena, SCENE_PER_CAPITOLO, promptImmagine } from "./illustrazioni/scene.js";
 import * as archivio from "./stato/archivio.js";
+import * as playtest from "./playtest/registro.js";
 
 const MAX_CORPO = 64 * 1024; // 64 KB: più che sufficiente per un'azione di gioco
 
@@ -89,12 +92,38 @@ export function vistaConfig() {
     tratti: TRATTI,
     nomiSuggeriti: NOMI_SUGGERITI,
     regoleParoleCapitolo: { min: 150, max: 200 },
-    opzioniMinime: 3
+    opzioniMinime: 3,
+    illustrazioni: {
+      attive: true,
+      perCapitolo: SCENE_PER_CAPITOLO,
+      generatore: "motore-svg-integrato",
+      descrizione: "Ogni capitolo riceve " + SCENE_PER_CAPITOLO + " illustrazioni generate dal contenuto della scena (luogo, volto dell'NPC, la tua mossa, colpo di scena, cliffhanger). Nessun servizio esterno, nessun costo.",
+      urlPrompt: "/api/partite/:id/illustrazioni/:capitolo/:indice/prompt"
+    },
+    playtest: {
+      attivo: playtest.attivo(),
+      registrazione: "locale",
+      nota: "Il registro degli eventi è locale (dati/playtest/) e non contiene dati personali: serve a valutare il test giocato.",
+      feedbackDisponibile: true
+    },
+    alberoFiducia: {
+      assi: ASSI,
+      quadranti: QUADRANTI,
+      tappe: TAPPE,
+      descrizione: "Ogni NPC è descritto da Vincolo, Tensione e Rispetto: la combinazione genera quattro quadranti narrativi e uno storico di tappe."
+    }
   };
 }
 
 /** Vista completa della partita per il client (scheda + cronaca + economia). */
 export function vistaPartita(partita, adesso = new Date()) {
+  // Le illustrazioni del capitolo più recente vengono inviate con la partita;
+  // per i capitoli precedenti il client le richiede all'occorrenza.
+  const ultimo = partita.storia?.at(-1);
+  const capitoloCorrente = ultimo
+    ? { numero: ultimo.numero, illustrazioni: descriviIllustrazioni(partita, ultimo) }
+    : null;
+
   return {
     id: partita.id,
     creataIl: partita.creataIl,
@@ -112,7 +141,9 @@ export function vistaPartita(partita, adesso = new Date()) {
       digest: digest(partita)
     },
     storia: partita.storia,
-    capitoliTotali: partita.storia.length
+    capitoliTotali: partita.storia.length,
+    alberoFiducia: alberoRelazioni(partita),
+    illustrazioniCorrenti: capitoloCorrente
   };
 }
 
@@ -145,6 +176,11 @@ const ROTTE = [
         ctx.adesso
       );
       await archivio.salva(partita);
+      await playtest.registra("saga-creata", {
+        saga: partita.id,
+        ambientazione: partita.configurazione.ambientazione.id,
+        tono: partita.configurazione.tono
+      });
       return { partita: vistaPartita(partita, ctx.adesso), bonus: BONUS_BENVENUTO };
     }
   },
@@ -180,17 +216,37 @@ const ROTTE = [
     schema: ["api", "partite", ":id", "capitolo"],
     gestore: async (ctx) => {
       const partita = await archivio.leggi(ctx.params.id);
-      const { capitolo, note } = await generaCapitoloNarrativo({
-        partita,
-        azione: ctx.corpo,
-        adesso: ctx.adesso
-      });
-      await archivio.salva(partita);
-      return {
-        capitolo,
-        note,
-        partita: vistaPartita(partita, ctx.adesso)
-      };
+      const inizio = Date.now();
+      try {
+        const { capitolo, note } = await generaCapitoloNarrativo({
+          partita,
+          azione: ctx.corpo,
+          adesso: ctx.adesso
+        });
+        await archivio.salva(partita);
+        await playtest.registra("capitolo-generato", {
+          saga: partita.id,
+          numero: capitolo.numero,
+          parole: capitolo.parole,
+          opzioni: capitolo.opzioni.length,
+          tipoAzione: ctx.corpo?.opzioneId ? "scelta" : ctx.corpo?.testo ? "personalizzata" : "proemio",
+          motore: capitolo.motore || capitolo.provenienza,
+          millisecondi: Date.now() - inizio
+        });
+        return {
+          capitolo,
+          note,
+          partita: vistaPartita(partita, ctx.adesso)
+        };
+      } catch (errore) {
+        await playtest.registra("capitolo-rifiutato", {
+          saga: partita.id,
+          numero: partita.storia.length + 1,
+          motivo: errore?.codice || errore?.name || "ERRORE",
+          millisecondi: Date.now() - inizio
+        });
+        throw errore;
+      }
     }
   },
   {
@@ -202,6 +258,7 @@ const ROTTE = [
         ? ctx.corpo.modalita
         : "missione";
       const esito = ricarica(partita.economia, modalita, ctx.adesso);
+      await playtest.registra("ricarica", { saga: partita.id, modalita, saldo: esito.portafoglio?.saldo });
       await archivio.salva(partita);
       return {
         messaggio: esito.messaggio,
@@ -210,6 +267,91 @@ const ROTTE = [
         partita: vistaPartita(partita, ctx.adesso)
       };
     }
+  },
+  {
+    metodo: "GET",
+    schema: ["api", "partite", ":id", "illustrazioni", ":numero"],
+    gestore: async (ctx) => {
+      const partita = await archivio.leggi(ctx.params.id);
+      const capitolo = trovaCapitolo(partita, ctx.params.numero);
+      return {
+        capitolo: capitolo.numero,
+        titolo: capitolo.titolo,
+        scene: descriviIllustrazioni(partita, capitolo),
+        generatore: "motore-svg-integrato"
+      };
+    }
+  },
+  {
+    metodo: "GET",
+    schema: ["api", "partite", ":id", "illustrazioni", ":numero", ":indice"],
+    gestore: async (ctx) => {
+      const partita = await archivio.leggi(ctx.params.id);
+      const capitolo = trovaCapitolo(partita, ctx.params.numero);
+      const indice = Number(ctx.params.indice);
+      if (!Number.isInteger(indice) || indice < 0 || indice >= SCENE_PER_CAPITOLO) {
+        throw new ErroreGioco(`Indice di scena non valido: usare un numero da 0 a ${SCENE_PER_CAPITOLO - 1}.`, "SCENA_NON_VALIDA", 400);
+      }
+      const scena = generaScena({ partita, capitolo, indice });
+      return {
+        __raw: scena.svg,
+        __intestazioni: {
+          "Content-Type": "image/svg+xml; charset=utf-8",
+          // Le scene sono deterministiche: si possono mettere in cache a lungo
+          "Cache-Control": "public, max-age=31536000, immutable"
+        }
+      };
+    }
+  },
+  {
+    metodo: "GET",
+    schema: ["api", "partite", ":id", "illustrazioni", ":numero", ":indice", "prompt"],
+    gestore: async (ctx) => {
+      const partita = await archivio.leggi(ctx.params.id);
+      const capitolo = trovaCapitolo(partita, ctx.params.numero);
+      return {
+        prompt: promptImmagine(partita, capitolo, Number(ctx.params.indice)),
+        nota: "Prompt pronto per un eventuale generatore di immagini esterno (non necessario: il gioco include il proprio motore SVG)."
+      };
+    }
+  },
+  {
+    metodo: "GET",
+    schema: ["api", "partite", ":id", "albero"],
+    gestore: async (ctx) => {
+      const partita = await archivio.leggi(ctx.params.id);
+      return {
+        albero: alberoRelazioni(partita),
+        spiegazione: "Assi: Vincolo (quanto vi lega), Tensione (quanto è conflittuale), Rispetto (quanto ti stima). I quadranti nascono da Vincolo × Tensione; le tappe segnano gli eventi decisivi."
+      };
+    }
+  },
+  {
+    metodo: "POST",
+    schema: ["api", "playtest", "evento"],
+    gestore: async (ctx) => {
+      const { tipo, ...dati } = ctx.corpo || {};
+      if (!tipo) {
+        throw new ErroreGioco("Indicare il tipo di evento.", "EVENTO_NON_VALIDO", 400);
+      }
+      const evento = await playtest.registra(String(tipo), dati);
+      return { registrato: Boolean(evento), attivo: playtest.attivo() };
+    }
+  },
+  {
+    metodo: "GET",
+    schema: ["api", "playtest", "riepilogo"],
+    gestore: async (ctx) => ({
+      riepilogo: await playtest.riepilogo(ctx.query?.data || null),
+      cartella: playtest.CARTELLA_PLAYTEST
+    })
+  },
+  {
+    metodo: "GET",
+    schema: ["api", "playtest", "eventi"],
+    gestore: async (ctx) => ({
+      eventi: await playtest.leggiEventi(ctx.query?.data || null)
+    })
   },
   {
     metodo: "GET",
@@ -228,6 +370,16 @@ const ROTTE = [
     }
   }
 ];
+
+/** Trova un capitolo della saga per numero (1-based). */
+export function trovaCapitolo(partita, numero) {
+  const n = Number(numero);
+  const capitolo = partita.storia.find((c) => c.numero === n);
+  if (!capitolo) {
+    throw new ErroreGioco(`Il capitolo ${numero} non esiste in questa saga.`, "CAPITOLO_NON_TROVATO", 404);
+  }
+  return capitolo;
+}
 
 /** Esporta l'intera saga come romanzo in Markdown. */
 export function esportaRomanzo(partita) {
@@ -265,9 +417,11 @@ export function esportaRomanzo(partita) {
   righe.push(`- **Protagonista:** ${c.protagonista.nome} (${c.protagonista.archetipo}, ${c.protagonista.tratto})`);
   righe.push(`- **Vitali:** vita ${partita.stato.vitali.vita}/100 · energia ${partita.stato.vitali.energia}/100 · tensione ${partita.stato.vitali.tensione}/100`);
   righe.push(`- **Inventario:** ${partita.stato.inventario.length ? partita.stato.inventario.map((o) => o.nome).join(", ") : "vuoto"}`);
-  righe.push("- **Relazioni:**");
-  for (const r of partita.stato.relazioni) {
-    righe.push(`  - ${r.npc} — ${r.ruolo} (fiducia ${r.fiducia}/100)${r.nota ? ` · ${r.nota}` : ""}`);
+  righe.push("- **Albero di fiducia:**");
+  for (const nodo of alberoRelazioni(partita).nodi) {
+    righe.push(`  - ${nodo.npc} — ${nodo.ruolo} · ${nodo.quadrante.nome} · Vincolo ${nodo.vincolo} / Tensione ${nodo.tensione} / Rispetto ${nodo.rispetto}`);
+    if (nodo.tappe.length) righe.push(`    - tappe: ${nodo.tappe.map((t) => `${t.nome} (cap. ${t.capitolo})`).join(", ")}`);
+    if (nodo.nota) righe.push(`    - nota: ${nodo.nota}`);
   }
   righe.push("- **Sinossi:**");
   for (const v of partita.stato.sinossi) {

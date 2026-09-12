@@ -278,7 +278,58 @@ flowchart LR
 
 ---
 
-## 9. Requisiti non funzionali
+## 9. Flusso G — Illustrazioni di scena (5 per capitolo)
+
+```mermaid
+flowchart TD
+    CAP["Capitolo appena generato<br/>titolo · testo · azioneGiocatore · stato"] --> FK["frasiChiave(testo)<br/>frasi candidate + punteggio narrativo"]
+    CAP --> TAV["tavolozza(momento, bancheDa, colori, tipo)<br/>cielo · sfondo · accenti · nebbia"]
+    FK --> DES["descriviIllustrazioni()<br/>5 scene: panorama · ritratto · azione · svolta · cliffhanger"]
+    TAV --> DES
+    DES --> SEM["creaSeme(id, 'scena', capitolo, indice, ambito)<br/>→ tutti i dettagli casuali restano identici"]
+    SEM --> SVG["generaScena() → SVG 1280x720"]
+    SVG --> API["GET /api/partite/:id/illustrazioni/:cap/:idx<br/>image/svg+xml · cache immutabile"]
+    API --> STR["Striscia sotto il capitolo"]
+    API --> GAL["Galleria a schermo intero<br/>frecce ← → e scorrimento a dito"]
+    API --> DIA["Pulsante «Illustrazioni» nel diario"]
+    CAP -.->|opzionale| PR["promptImmagine()<br/>prompt per un modello esterno"]
+```
+
+- Cinque scene per capitolo, sempre dello stesso tipo e nello stesso ordine.
+- Il **determinismo** garantisce che le immagini di una saga non cambino mai: sono un bene della
+  partita, non un effetto temporaneo.
+- Nessun servizio esterno e nessun costo: il motore SVG è parte del gioco.
+
+---
+
+## 10. Flusso H — Albero di fiducia a tre assi
+
+```mermaid
+flowchart TD
+    AZ["Azione del giocatore"] --> INT["analizzaIntento()"]
+    INT --> DA["DELTA_ASSI[intento]<br/>vincolo · tensione · rispetto"]
+    DA --> AD["applicaDelta(stato, delta)"]
+    AD --> CO["Coerenza di ruolo<br/>un Nemico non si addolcisce per una gentilezza"]
+    CO --> LI["limita 0-100"]
+    LI --> Q["quadrante(vincolo, tensione)<br/>Alleanza · Rivalità · Crocevia · Ostilità"]
+    LI --> S["sfumatura(rispetto)<br/>ti ammira · ti stima · ti sottovaluta · ti disprezza · ti teme"]
+    LI --> T["tappeDaAssi()<br/>primo incontro · legame · primo scontro · confidenza<br/>patto · frattura · riconciliazione"]
+    LI --> ST["storico per capitolo (ultimi 12)"]
+    Q --> UI["Piano cartesiano interattivo (public/js/albero.js)"]
+    T --> UI
+    ST --> UI
+    LI --> DIG["digest di memoria → prompt del Game Master"]
+```
+
+- Ogni variazione è **incrementale**: il narratore descrive il cambiamento, non il valore assoluto.
+- Il gioco *sa* che un personaggio può piacerti e starti sulle scorte insieme: è la differenza fra
+  «Rivalità» e «Ostilità».
+- L'albero non è solo una schermata: gli stessi numeri entrano nel digest che il Game Master legge
+  prima di scrivere il capitolo successivo.
+
+---
+
+## 11. Requisiti non funzionali
 
 | Requisito | Implementazione |
 |---|---|
@@ -288,3 +339,7 @@ flowchart LR
 | Single-player | Nessuna autenticazione, nessun canale realtime, nessuna condivisione |
 | Zero dipendenze | Solo moduli nativi Node; nessun build step per il frontend |
 | Ispezionabilità della memoria | Endpoint `/memoria` + pannello “Memoria iniettata” nella UI |
+| Illustrazioni senza costi né attese | Motore SVG interno: < 1 ms per scena, zero servizi esterni |
+| Giocabile da telefono | Punti di rottura 1080/980/900/720/620/420 px, bersagli ≥ 44 px, nessuno scorrimento orizzontale |
+| Playtest misurabile | Registro eventi locale in JSONL + modulo di parere + riepilogo da terminale |
+| Nessun dato personale | Il registro non contiene IP, email né nomi di giocatori |

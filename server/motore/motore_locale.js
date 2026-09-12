@@ -14,6 +14,7 @@ import {
   DOMANDE_FINALI, TEMPLATE_SCELTE, SINTESI_INTENTO, MOMENTI, CONNETTIVI_TEMPO,
   vociPerRuolo, VOCI_PER_INTENTO
 } from "./lessico.js";
+import { DELTA_ASSI } from "../stato/relazioni.js";
 
 // ---------------------------------------------------------------------------
 // Banche interne di supporto alla composizione
@@ -237,11 +238,6 @@ const DELTA_VITALI = {
   indagine: { vita: -2, energia: -6, tensione: 8 },
   generico: { vita: -2, energia: -5, tensione: 5 },
   proemio: { vita: 0, energia: 0, tensione: 4 }
-};
-
-const DELTA_FIDUCIA = {
-  combattimento: -6, dialogo: 8, esplorazione: 2, fuga: -2,
-  astuzia: -5, cura: 10, indagine: 6, generico: 1, proemio: 12
 };
 
 const ORDINE_RUOLI = { Nemico: 0, Rivale: 1, Sospetto: 2, Mentore: 3, Alleato: 4, Alleata: 4, Amico: 5, "Interesse Amoroso": 6 };
@@ -517,20 +513,33 @@ function calcolaDelta({ rng, banco, stato, intento, npc, npcIsNuovo, luogoObj, a
     }
   }
 
-  // --- Relazione con l'NPC --------------------------------------------------
+  // --- Relazione con l'NPC: albero di fiducia a tre assi --------------------
   const esistente = (stato.relazioni || []).find((r) => r.npc.toLowerCase() === npc.nome.toLowerCase());
-  const fiduciaBase = esistente ? esistente.fiducia : 50;
-  const variazione = (DELTA_FIDUCIA[intento] ?? 0) + (rng() < 0.3 ? (rng() < 0.5 ? 4 : -4) : 0);
-  const nuovaFiducia = Math.max(0, Math.min(100, fiduciaBase + variazione));
-  let ruolo = esistente?.ruolo || npc.ruolo;
-  if (esistente) {
-    if (nuovaFiducia >= 80 && !["Interesse Amoroso", "Amico"].includes(ruolo)) ruolo = "Amico";
-    else if (nuovaFiducia <= 20 && ruolo !== "Nemico") ruolo = "Rivale";
+  const base = DELTA_ASSI[intento] || DELTA_ASSI.generico;
+
+  // Piccola variazione casuale perché due azioni simili non diano sempre lo stesso esito
+  const scarto = () => (rng() < 0.35 ? (rng() < 0.5 ? 3 : -3) : 0);
+  const variazione = {
+    vincolo: base.vincolo + scarto(),
+    tensione: base.tensione + scarto(),
+    rispetto: base.rispetto + scarto()
+  };
+
+  // Coerenza col ruolo noto: un Nemico non si addolcisce senza motivo narrativo
+  if (esistente && ["Rivale", "Nemico", "Sospetto"].includes(esistente.ruolo)) {
+    variazione.vincolo = Math.min(variazione.vincolo, 2);
+    variazione.tensione = Math.max(variazione.tensione, 1);
   }
+  if (esistente &&["Amico", "Alleato", "Alleata", "Interesse Amoroso"].includes(esistente.ruolo) && intento === "cura") {
+    variazione.vincolo += 4;
+  }
+
   deltaStato.relazioni.push({
     npc: npc.nome,
-    ruolo,
-    fiducia: nuovaFiducia,
+    ruolo: npc.ruolo,
+    deltaVincolo: variazione.vincolo,
+    deltaTensione: variazione.tensione,
+    deltaRispetto: variazione.rispetto,
     aspetto: npc.aspetto,
     tic: npc.tic,
     nota: generaNotaRelazione(intento, azione),

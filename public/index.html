@@ -116,6 +116,8 @@
 
         <article id="capitolo-corrente" class="capitolo card" aria-live="polite"></article>
 
+        <section id="striscia-illustrazioni" class="striscia-illustrazioni nascosto" aria-label="Illustrazioni del capitolo"></section>
+
         <section id="blocco-proemio" class="azione-libera card nascosto">
           <div class="proemio-invito">
             <h3 class="titolo-blocco">Inizio della saga</h3>
@@ -148,62 +150,90 @@
           <p id="messaggio-attesa">Il Game Master sta scrivendo il capitolo…</p>
         </div>
 
-        <section id="sezione-diario" class="diario card nascosto">
-          <h3 class="titolo-sezione">Diario della saga <span id="conteggio-capitoli" class="contatore-capitoli"></span></h3>
-          <div id="elenco-capitoli" class="elenco-capitoli"></div>
-          <button id="btn-esporta" class="btn ghost">⬇ Esporta il romanzo in Markdown</button>
-        </section>
+
       </div>
 
-      <!-- ── Pannello laterale: Scheda del Personaggio e Storia ── -->
+      <!-- ── Pannello laterale: Scheda · Relazioni · Cronaca ── -->
       <aside id="pannello-scheda" class="pannello card" aria-label="Scheda del Personaggio e Storia">
         <header class="pannello-intestazione">
           <h2>Scheda del Personaggio e Storia</h2>
           <button id="btn-chiudi-pannello" class="btn mini ghost" title="Chiudi il pannello">✕</button>
         </header>
 
-        <section class="blocco-scheda">
-          <h3 class="titolo-blocco">Protagonista</h3>
-          <div class="protagonista">
-            <div class="avatar" id="scheda-avatar">?</div>
-            <div>
-              <p class="nome" id="scheda-nome">—</p>
-              <p class="ruolo" id="scheda-archetipo">—</p>
-              <p class="tratto" id="scheda-tratto">—</p>
+        <nav class="schede-pannello" role="tablist" aria-label="Sezioni del pannello">
+          <button class="scheda-tab attiva" role="tab" aria-selected="true" data-scheda="personaggio">Personaggio</button>
+          <button class="scheda-tab" role="tab" aria-selected="false" data-scheda="relazioni">Relazioni</button>
+          <button class="scheda-tab" role="tab" aria-selected="false" data-scheda="cronaca">Cronaca</button>
+        </nav>
+
+        <!-- ═ Scheda: personaggio ═ -->
+        <div class="contenuto-scheda" id="vista-personaggio">
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Protagonista</h3>
+            <div class="protagonista">
+              <div class="avatar" id="scheda-avatar">?</div>
+              <div>
+                <p class="nome" id="scheda-nome">—</p>
+                <p class="ruolo" id="scheda-archetipo">—</p>
+                <p class="tratto" id="scheda-tratto">—</p>
+              </div>
             </div>
-          </div>
-          <div class="vitali" id="scheda-vitali"></div>
-          <p class="luogo-attuale"><span id="scheda-luogo">—</span> · <span id="scheda-arco">—</span></p>
-        </section>
+            <div class="vitali" id="scheda-vitali"></div>
+            <p class="luogo-attuale"><span id="scheda-luogo">—</span> · <span id="scheda-arco">—</span></p>
+          </section>
 
-        <section class="blocco-scheda">
-          <h3 class="titolo-blocco">Inventario <span class="contatore-capitoli" id="conteggio-inventario"></span></h3>
-          <ul id="scheda-inventario" class="lista-oggetti"></ul>
-        </section>
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Inventario <span class="contatore-capitoli" id="conteggio-inventario"></span></h3>
+            <ul id="scheda-inventario" class="lista-oggetti"></ul>
+          </section>
 
-        <section class="blocco-scheda">
-          <h3 class="titolo-blocco">Relazioni con gli NPC</h3>
-          <ul id="scheda-relazioni" class="lista-relazioni"></ul>
-        </section>
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Obiettivi</h3>
+            <ul id="scheda-obiettivi" class="lista-obiettivi"></ul>
+          </section>
+        </div>
 
-        <section class="blocco-scheda">
-          <h3 class="titolo-blocco">Obiettivi</h3>
-          <ul id="scheda-obiettivi" class="lista-obiettivi"></ul>
-        </section>
+        <!-- ═ Scheda: albero di fiducia ═ -->
+        <div class="contenuto-scheda nascosto" id="vista-relazioni">
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Albero di fiducia</h3>
+            <p class="aiuto-blocco piccolo">
+              Ogni NPC ha tre assi: <strong>Vincolo</strong> (quanto vi lega),
+              <strong>Tensione</strong> (quanto è conflittuale) e <strong>Rispetto</strong> (quanto ti stima).
+              Trascina lo sguardo dal tuo punto di partenza: le frecce mostrano come si è mosso il rapporto nell'ultimo capitolo.
+            </p>
+            <div id="albero-relazioni" class="albero-contenitore"></div>
+          </section>
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Elenco rapido</h3>
+            <ul id="lista-relazioni-rapida" class="lista-relazioni"></ul>
+          </section>
+        </div>
 
-        <section class="blocco-scheda">
-          <h3 class="titolo-blocco">Sinossi dei capitoli</h3>
-          <ol id="scheda-sinossi" class="lista-sinossi"></ol>
-        </section>
+        <!-- ═ Scheda: cronaca ═ -->
+        <div class="contenuto-scheda nascosto" id="vista-cronaca">
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Sinossi dei capitoli</h3>
+            <ol id="scheda-sinossi" class="lista-sinossi"></ol>
+          </section>
+          <section class="blocco-scheda">
+            <h3 class="titolo-blocco">Diario <span class="contatore-capitoli" id="conteggio-capitoli"></span></h3>
+            <div id="elenco-capitoli" class="elenco-capitoli"></div>
+            <button id="btn-esporta" class="btn ghost">⬇ Esporta il romanzo in Markdown</button>
+          </section>
+        </div>
 
         <footer class="pannello-piede">
           <button id="btn-memoria-iniettata" class="btn ghost piccolo">🧠 Memoria iniettata</button>
           <button id="btn-ricarica-rapida" class="btn ghost piccolo">🪙 Ricarica rapida</button>
+          <button id="btn-galleria" class="btn ghost piccolo">🖼 Illustrazioni</button>
+          <button id="btn-parere" class="btn ghost piccolo">📝 Lascia un parere</button>
+          <button id="btn-riepilogo" class="btn ghost piccolo">📊 Riepilogo playtest</button>
         </footer>
       </aside>
-    </div>
-  </section>
-</main>
+      </div>
+    </section>
+  </main>
 
 <!-- ══════════════════════ MODALE: PORTAFOGLIO / RICARICA RAPIDA ══════════════════════ -->
 <div id="modale-portafoglio" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-portafoglio">
@@ -264,6 +294,83 @@
       <button class="btn mini ghost chiudi-modale" data-chiudi="modale-capitolo">✕</button>
     </header>
     <div id="testo-capitolo-modale" class="testo-capitolo-modale"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: PARERE DEL GIOCATORE (playtest) ══════════════════════ -->
+<div id="modale-parere" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-parere">
+  <div class="modale-contenuto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-parere">Come sta andando?</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-parere">✕</button>
+    </header>
+    <p class="aiuto-blocco" id="parere-origine">Raccontaci com'è andata: serve a migliorare il gioco.</p>
+
+    <div class="campo">
+      <span class="etichetta">Quanto ti sta piacendo? <span id="parere-voto-etichetta">Tocca le stelle</span></span>
+      <div id="parere-voto" class="parere-stelle" role="group" aria-label="Voto da 1 a 5 stelle"></div>
+    </div>
+
+    <div class="campo">
+      <label class="etichetta" for="parere-chiarezza">Ti è chiaro che cosa devi fare?</label>
+      <select id="parere-chiarezza" class="input-testo">
+        <option value="">— scegli —</option>
+        <option value="sempre chiaro">Sì, sempre chiaro</option>
+        <option value="a volte incerto">A volte non capivo cosa fare</option>
+        <option value="spesso confuso">Spesso ero confuso</option>
+      </select>
+    </div>
+
+    <div class="campo">
+      <label class="etichetta" for="parere-piace">Che cosa ti è piaciuto di più?</label>
+      <input id="parere-piace" class="input-testo" maxlength="300" placeholder="La storia, le scelte, le immagini…">
+    </div>
+
+    <div class="campo">
+      <label class="etichetta" for="parere-confusione">Che cosa ti ha confuso o rallentato?</label>
+      <input id="parere-confusione" class="input-testo" maxlength="300" placeholder="Qualcosa che non funzionava o non si capiva…">
+    </div>
+
+    <div class="campo">
+      <label class="etichetta" for="parere-commento">Un commento libero</label>
+      <textarea id="parere-commento" class="input-testo" rows="3" maxlength="400"></textarea>
+    </div>
+
+    <button id="btn-invia-parere" class="btn primary">Invia il parere</button>
+    <p class="aiuto-blocco piccolo">Nessun dato personale: il parere resta in locale, sul computer del facilitatore.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: RIEPILOGO PLAYTEST ══════════════════════ -->
+<div id="modale-riepilogo" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-riepilogo">
+  <div class="modale-contenuto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-riepilogo">Riepilogo del playtest</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-riepilogo">✕</button>
+    </header>
+    <div id="contenuto-riepilogo" class="contenuto-npc"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: GALLERIA ILLUSTRAZIONI ══════════════════════ -->
+<div id="modale-galleria" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-galleria">
+  <div class="modale-contenuto larga">
+    <header class="modale-intestazione">
+      <h2 id="titolo-galleria">Illustrazioni del capitolo</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-galleria">✕</button>
+    </header>
+    <div id="contenuto-galleria" class="contenuto-galleria"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODALE: SCHEDA NPC (albero di fiducia) ══════════════════════ -->
+<div id="modale-npc" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-npc">
+  <div class="modale-contenuto">
+    <header class="modale-intestazione">
+      <h2 id="titolo-npc">Personaggio</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-npc">✕</button>
+    </header>
+    <div id="contenuto-npc" class="contenuto-npc"></div>
   </div>
 </div>
 

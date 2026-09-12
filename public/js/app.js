@@ -9,6 +9,8 @@ import { creaSetup } from "./setup.js";
 import { creaCapitolo } from "./capitolo.js";
 import { creaScheda } from "./scheda.js";
 import { creaPortafoglio } from "./portafoglio.js";
+import { creaIllustrazioni } from "./illustrazioni.js";
+import { creaPlaytest } from "./playtest.js";
 
 const CHIAVE_ULTIMA_SAGA = "masterrpg.ultimaSaga";
 
@@ -24,9 +26,13 @@ const scheda = creaScheda({
     capitoloModale.disegnaModale(capitolo);
     apriModale("modale-capitolo");
   },
+  onApriIllustrazioni: (capitolo) => illustrazioni.apriCapitolo(capitolo),
   onMostraMemoria: () => apriMemoria(),
   onApriPortafoglio: () => portafoglio.apri()
 });
+
+const playtest = creaPlaytest({ api });
+const illustrazioni = creaIllustrazioni({ api, onScenaAperta: (capitolo, indice) => playtest.scenaAperta(capitolo, indice) });
 
 const capitoloModale = creaCapitolo({ onInviaAzione: inviaAzione });
 
@@ -70,6 +76,7 @@ function entraInGioco(partita) {
   mostra($("#schermata-gioco"));
   applicaColoriAmbientazione(partita.configurazione.ambientazione.id);
   applicaPartita(partita);
+  playtest.avvia(partita);
   const capitoli = partita.storia;
   if (capitoli.length) {
     capitoloModale.disegna(capitoli[capitoli.length - 1], { animare: false });
@@ -99,6 +106,8 @@ function applicaPartita(partita) {
   $("#titolo-saga").textContent = partita.configurazione.titoloSaga;
   scheda.disegna(partita);
   portafoglio.aggiorna(partita);
+  playtest.capitoloGenerato(partita);
+  illustrazioni.aggiorna(partita);
   capitoloModale.aggiornaBottoneGenera();
   const ultimo = partita.storia.at(-1);
   if (ultimo && ultimo.numero === partita.storia.length) scheda.mostraDiario();
@@ -119,6 +128,9 @@ async function inviaAzione(azione) {
     capitoloModale.disegna(esito.capitolo, { animare: true });
     capitoloModale.attivaScelte(esito.capitolo.opzioni.length > 0);
     capitoloModale.aggiornaBottoneGenera();
+
+    // Le nuove illustrazioni entrano con una lieve animazione
+    illustrazioni.aggiorna(esito.partita, { animare: true });
 
     // Si torna all'inizio del capitolo se il giocatore si trovava più in basso
     const capitoloEl = $("#capitolo-corrente");
@@ -274,6 +286,19 @@ async function avvia() {
   inizializzaModali();
   collegaConferma();
   portafoglio.collega();
+  scheda.collega();
+  illustrazioni.collega();
+  playtest.collega();
+
+  // Scorciatoie da tastiera: ← → nella galleria, Esc chiude i modali
+  $("#btn-galleria").addEventListener("click", () => {
+    const capitolo = stato.partita?.storia?.at(-1);
+    if (!capitolo) {
+      toast("Genera il primo capitolo per vedere le illustrazioni.", "info");
+      return;
+    }
+    illustrazioni.apriCapitolo(capitolo);
+  });
 
   $("#btn-pannello").addEventListener("click", () => impostaPannello($("#pannello-scheda").classList.contains("nascosto")));
   $("#btn-chiudi-pannello").addEventListener("click", () => impostaPannello(false));

@@ -7,6 +7,10 @@ L'utente sceglie un'ambientazione (o ne inventa una), crea il proprio protagonis
 a capitoli: l'**IA Game Master** scrive un capitolo per volta (150–200 parole), propone 3–4 scelte
 rapide e accetta qualsiasi **Azione Personalizzata** scritta liberamente dal giocatore.
 
+Ogni capitolo porta con sé **cinque illustrazioni** generate dal testo, ogni personaggio vive in un
+**albero di fiducia a tre assi**, e il gioco è pronto per un **playtest reale** con registrazione
+degli eventi e modulo di parere.
+
 ---
 
 ## 1. Avvio rapido
@@ -15,6 +19,17 @@ rapide e accetta qualsiasi **Azione Personalizzata** scritta liberamente dal gio
 node server/index.js          # oppure: npm start
 # → http://localhost:3000
 ```
+
+### Vuoi far giocare qualcuno adesso? Un solo comando
+
+```bash
+npm run playtest              # prepara tutto e stampa le istruzioni per il giocatore
+```
+
+Azzera i dati di prova, prepara una saga già pronta, avvia il server, mostra
+l'indirizzo da aprire (anche dal telefono, sulla stessa rete Wi-Fi) e alla
+chiusura con `Ctrl+C` stampa il **riepilogo della sessione**. Il protocollo
+completo è in **[`docs/05-playtest.md`](docs/05-playtest.md)**.
 
 Nessun `npm install` necessario: il progetto usa **solo moduli nativi Node** (`node:http`, `node:fs`, `fetch`).
 È possibile forzare una porta diversa con la variabile d'ambiente `PORT`.
@@ -39,7 +54,15 @@ degrada automaticamente sul motore locale e lo segnala nell'interfaccia.
 
 ---
 
-## 2. Le quattro funzionalità richieste
+## 2. Le illustrazioni in una riga
+
+Ogni capitolo genera **cinque scene** a partire dal proprio testo: il luogo, il volto dell'NPC, la tua
+mossa, il colpo di scena e il cliffhanger. Sono vettoriali, deterministiche e istantanee: nessun
+servizio esterno, nessun costo.
+
+![Sette ambientazioni illustrate](docs/immagini/ambientazioni.png)
+
+## 3. Funzionalità
 
 1. **Interfaccia e motore di gioco (Single-Player Master)** — scelta dell'ambientazione dai preset o
    tramite testo libero; generazione di un capitolo per volta con scenario, dialoghi NPC e cliffhanger;
@@ -55,10 +78,29 @@ degrada automaticamente sul motore locale e lo segnala nell'interfaccia.
    **non si blocca mai** (`server/crediti/portafoglio.js`).
 4. **Localizzazione e stile** — tutta la UI e tutti i testi generati sono in italiano, con registro da
    light novel / anime: enfasi emotiva, dialoghi espressivi, colpi di scena a fine capitolo.
+5. **Illustrazioni di scena (4-5 per capitolo)** — un motore SVG interno disegna cinque *key visual*
+   per ogni capitolo: panorama del luogo all'ora giusta, primo piano dell'NPC, la mossa del giocatore,
+   il colpo di scena e il cliffhanger. Deterministiche, istantanee, senza costi né servizi esterni
+   (`server/illustrazioni/`). Vedi **[`docs/04-illustrazioni-e-relazioni.md`](docs/04-illustrazioni-e-relazioni.md)**.
+6. **Albero di fiducia evoluto** — ogni NPC è descritto da **Vincolo**, **Tensione** e **Rispetto**;
+   dalla combinazione nascono quattro quadranti narrativi (*Alleanza, Rivalità, Crocevia, Ostilità*),
+   otto **tappe** del legame e uno storico capitolo per capitolo, mostrato in un piano cartesiano
+   interattivo (`server/stato/relazioni.js`, `public/js/albero.js`).
+7. **Giocabile da telefono** — punti di rottura a 1080/980/900/720/620/420 px, pannello a schede,
+   modali a tutta larghezza, bersagli tattili ≥ 44 px, nessuno scorrimento orizzontale.
+8. **Kit di playtest** — registro eventi locale (`dati/playtest/`), modulo di parere in quattro
+   domande, riepilogo da terminale con suggerimenti automatici (`npm run playtest:riepilogo`).
+
+### L'albero di fiducia in azione
+
+Dopo 24 capitoli di una saga cyberpunk: quattro personaggi, quattro quadranti diversi, frecce che
+mostrano come si è spostato ogni rapporto nell'ultimo capitolo.
+
+![Albero di fiducia](docs/immagini/albero-fiducia.png)
 
 ---
 
-## 3. Struttura del progetto
+## 4. Struttura del progetto
 
 ```
 masterRPG/
@@ -78,26 +120,39 @@ masterRPG/
 │   │   └── archivio.js          # persistenza su file JSON (dati/partite/*.json)
 │   └── crediti/
 │       └── portafoglio.js       # Token Storia: bonus, spesa, ricarica gratuita
+│   ├── stato/
+│   │   ├── relazioni.js         # albero di fiducia: assi, quadranti, tappe, storico
+│   ├── illustrazioni/
+│   │   ├── palette.js           # cieli per momento, sfondi per ambientazione, accenti
+│   │   └── scene.js             # motore SVG: 5 scene per capitolo, figure, cornici
+│   └── playtest/
+│       └── registro.js          # registro locale degli eventi di playtest (JSONL)
 ├── public/                      # interfaccia (nessun build step)
 │   ├── index.html
 │   ├── css/style.css
-│   └── js/{app,api,setup,capitolo,scheda,portafoglio}.js
+│   └── js/{app,api,setup,capitolo,scheda,albero,illustrazioni,portafoglio,playtest}.js
 ├── strumenti/                   # collaudi automatici e verifica statica
-│   ├── prova-motore.js          # 100+ capitoli: vincoli, crediti, memoria
+│   ├── avvia-playtest.js        # avvio guidato di una sessione di prova
+│   ├── riepilogo-playtest.js    # numeri e pareri della sessione
+│   ├── prova-motore.js          # 150 capitoli: vincoli, crediti, memoria
+│   ├── prova-illustrazioni.js   # scene, determinismo, assi, rotte REST
+│   ├── prova-mobile.js          # layout da telefono: 39 controlli statici
 │   ├── prova-interfaccia.js     # flusso di gioco completo (richiede jsdom)
 │   ├── prova-anticrisi.js       # garanzia anti-blocco con saldo esaurito
 │   └── verifica-html.js         # contratto fra HTML e JavaScript
 └── docs/                        # modellazione dei flussi e architettura
     ├── 01-flussi-di-lavoro.md
     ├── 02-architettura.md
-    └── 03-modello-dati.md
+    ├── 03-modello-dati.md
+    ├── 04-illustrazioni-e-relazioni.md
+    └── 05-playtest.md
 ```
 
 Documentazione dei flussi: **[`docs/01-flussi-di-lavoro.md`](docs/01-flussi-di-lavoro.md)**.
 
 ---
 
-## 4. API REST
+## 5. API REST
 
 | Metodo | Rotta | Descrizione |
 |---|---|---|
@@ -110,19 +165,31 @@ Documentazione dei flussi: **[`docs/01-flussi-di-lavoro.md`](docs/01-flussi-di-l
 | `GET` | `/api/partite/:id/memoria` | Digest della memoria iniettata nel prompt (trasparenza dello State Engine). |
 | `GET` | `/api/partite/:id/esporta` | Esporta la saga completa in Markdown. |
 | `DELETE` | `/api/partite/:id` | Elimina una saga. |
+| `GET` | `/api/partite/:id/illustrazioni/:capitolo` | Elenco delle 5 scene di un capitolo (titolo, didascalia, tipo, URL). |
+| `GET` | `/api/partite/:id/illustrazioni/:capitolo/:indice` | L'illustrazione come SVG 1280×720, con cache lunga e immutabile. |
+| `GET` | `/api/partite/:id/illustrazioni/:capitolo/:indice/prompt` | Prompt in inglese per un eventuale generatore di immagini esterno (opzionale). |
+| `GET` | `/api/partite/:id/albero` | Albero di fiducia: nodi, assi, quadranti, tappe, storico. |
+| `POST` | `/api/playtest/evento` | Registra un evento di playtest (solo in locale). |
+| `GET` | `/api/playtest/riepilogo` | Riassunto della sessione: tempi, capitoli, scene aperte, pareri. |
+| `GET` | `/api/playtest/eventi` | Elenco grezzo degli eventi registrati. |
 
 ---
 
-## 5. Collaudi automatici
+## 6. Collaudi automatici
 
 Il gioco non ha dipendenze, ma include una suite di verifica che ne dimostra il funzionamento.
 
 ```bash
 npm start                    # in un terminale: avvia il gioco
 
-npm run prova                # 100 capitoli di fila: lunghezza 150-200 parole,
-                             # 3-4 scelte, dialoghi bilanciati, sinossi, crediti,
-                             # ricarica d'emergenza, riavvio del gioco dopo il saldo zero
+npm run collaudo             # tutti i collaudi in sequenza (richiede il server attivo
+                             # per la parte REST e jsdom per l'interfaccia)
+npm run prova:motore         # 150 capitoli: lunghezza 150-200 parole, 3-4 scelte,
+                             # dialoghi bilanciati, sinossi, crediti, ricarica d'emergenza
+npm run prova:illustrazioni  # 5 scene per capitolo, determinismo, XML valido,
+                             # tutte le ambientazioni, assi dell'albero, rotte REST
+npm run prova:mobile         # layout da telefono: nessuno scorrimento orizzontale,
+                             # bersagli tattili, modali a tutta larghezza
 npm run verifica             # controllo statico del contratto fra HTML e JavaScript
 ```
 
@@ -136,18 +203,38 @@ npm run prova:anticrisi      # saldo a 5 Token: la Ricarica d'Emergenza sblocca 
 
 Esito dell'ultima esecuzione — saga di 150 capitoli generata in 2 secondi:
 
-| Controllo | Esito |
+| Collaudo | Esito |
 |---|---|
-| Capitoli conformi (150-200 parole, 3-4 scelte, virgolette bilanciate) | 1076/1076 verifiche superate |
-| Statistiche del testo | 27 818 parole, 459 battute di dialogo, 5 NPC, 6 luoghi |
-| Saldo esaurito al capitolo 101 | Ricarica d'Emergenza gratuita, la storia riprende subito |
-| Memoria a lungo termine | 600 capitoli → 9 voci di sinossi, digest di 2,2 KB iniettato nel prompt |
+| `prova-motore.js 150` | **1076/1076** verifiche · 28 000+ parole · 460 battute · 5 NPC · 6 luoghi |
+| `prova-illustrazioni.js` | **16 444** verifiche · 60 scene distinte · 7 ambientazioni × 7 momenti · 0,5 ms per scena |
+| `prova-mobile.js` | **39/39** verifiche sul layout da telefono |
+| `prova-interfaccia.js` (jsdom) | **87** verifiche · flusso completo, galleria, albero di fiducia, modali |
+| `prova-anticrisi.js` (jsdom) | **superato** · saldo esaurito → ricarica gratuita → la storia riprende |
+| Saldo esaurito al capitolo 101 | Ricarica d'Emergenza gratuita, nessun blocco possibile |
+| Memoria a lungo termine | 600 capitoli → 9 voci di sinossi, digest iniettato nel prompt |
 
 ---
 
-## 6. Prossimi passi possibili
+## 7. Playtest
 
-- Illustrazioni di scena generate a partire dal capitolo (apertura immagine + prompt visivo).
+| Comando | Cosa fa |
+|---|---|
+| `npm run playtest` | Avvia una sessione di prova guidata: registro azzerato, saga pronta, istruzioni a schermo, riepilogo alla chiusura. |
+| `npm run playtest:riepilogo` | Numeri della sessione: tempi per capitolo, dove si sono fermati i giocatori, voto medio, commenti, suggerimenti automatici. |
+| `npm run playtest -- --saga-vuota` | Prova anche il percorso di creazione della saga. |
+| `npm run playtest -- --conserva` | Non azzera il registro (più sessioni consecutive). |
+| `npm run playtest -- --produzione` | Come un giocatore vero: nessuna modalità di prova. |
+
+Il gioco registra gli eventi **solo in locale**, in `dati/playtest/eventi-*.jsonl`, senza dati
+personali. Protocollo completo, domande da fare e griglia di interpretazione:
+**[`docs/05-playtest.md`](docs/05-playtest.md)**.
+
+---
+
+## 8. Prossimi passi possibili
+
 - Narrazione vocale dei capitoli (TTS) con voce per ogni NPC.
-- Diario relazionale evoluto: albero di fiducia, eventi passati per NPC, “scheda nemico”.
+- Immagini da un modello esterno, usando i prompt già pronti (`…/illustrazioni/:cap/:idx/prompt`)
+  come alternativa al motore SVG interno.
 - Multi-saga con universo condiviso (personaggi ricorrenti tra partite diverse).
+- Pannello «storia della saga» con la linea del tempo dei quattro quadranti.
