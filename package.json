@@ -17,7 +17,8 @@
     "prova:interfaccia": "node strumenti/prova-interfaccia.js",
     "prova:anticrisi": "node strumenti/prova-anticrisi.js",
     "verifica": "node strumenti/verifica-html.js",
-    "collaudo": "npm run verifica && npm run prova:mobile && npm run prova:illustrazioni && npm run prova:motore && npm run prova:anticrisi && npm run prova:interfaccia"
+    "collaudo": "node strumenti/collaudo.js",
+    "collaudo:veloce": "node strumenti/collaudo.js --veloce"
   },
   "engines": {
     "node": ">=18"

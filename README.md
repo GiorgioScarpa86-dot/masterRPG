@@ -60,6 +60,10 @@ Ogni capitolo genera **cinque scene** a partire dal proprio testo: il luogo, il 
 mossa, il colpo di scena e il cliffhanger. Sono vettoriali, deterministiche e istantanee: nessun
 servizio esterno, nessun costo.
 
+![Le cinque scene di un capitolo](docs/immagini/cinque-scene.png)
+
+Sette ambientazioni, sette ore del giorno, nessun costo:
+
 ![Sette ambientazioni illustrate](docs/immagini/ambientazioni.png)
 
 ## 3. Funzionalità
@@ -180,10 +184,14 @@ Documentazione dei flussi: **[`docs/01-flussi-di-lavoro.md`](docs/01-flussi-di-l
 Il gioco non ha dipendenze, ma include una suite di verifica che ne dimostra il funzionamento.
 
 ```bash
-npm start                    # in un terminale: avvia il gioco
+npm run collaudo             # TUTTO in un comando: avvia da sé il server su una porta
+                             # libera, esegue i sei collaudi e stampa il riepilogo finale
+npm run collaudo:veloce      # come sopra, ma in versione ridotta (un minuto)
+```
 
-npm run collaudo             # tutti i collaudi in sequenza (richiede il server attivo
-                             # per la parte REST e jsdom per l'interfaccia)
+I singoli collaudi, se servono da soli (il server deve essere attivo):
+
+```bash
 npm run prova:motore         # 150 capitoli: lunghezza 150-200 parole, 3-4 scelte,
                              # dialoghi bilanciati, sinossi, crediti, ricarica d'emergenza
 npm run prova:illustrazioni  # 5 scene per capitolo, determinismo, XML valido,
@@ -193,7 +201,8 @@ npm run prova:mobile         # layout da telefono: nessuno scorrimento orizzonta
 npm run verifica             # controllo statico del contratto fra HTML e JavaScript
 ```
 
-Collaudi dell'interfaccia (richiedono la dipendenza opzionale `jsdom`, mai necessaria per giocare):
+I due collaudi jsdom (`prova:interfaccia`, `prova:anticrisi`) richiedono la libreria
+opzionale; `npm run collaudo` li salta con un avviso se non è installata:
 
 ```bash
 npm install --no-save jsdom

@@ -10,7 +10,7 @@ Tutto è già pronto: non serve installare nulla.
 ```bash
 cd masterRPG
 
-npm run collaudo     # 1. verifica che sia tutto a posto (un minuto)
+npm run collaudo     # 1. verifica che sia tutto a posto (avvia anche il server)
 npm run playtest     # 2. avvia la sessione di prova
 ```
 
@@ -104,6 +104,6 @@ rete Wi-Fi. La partita è la stessa, i salvataggi sono sul computer.
 |---|---|
 | `Porta 3000 già in uso` | `npm run playtest -- --porta 8080` |
 | Il telefono non apre la pagina | controlla che sia sulla stessa Wi-Fi; il firewall del computer deve permettere la porta |
-| I collaudi jsdom dicono che manca jsdom | `npm install --no-save jsdom` (serve **solo** per i collaudi, mai per giocare) |
+| I collaudi jsdom dicono che manca jsdom | `npm install --no-save jsdom` (serve **solo** per i collaudi, mai per giocare); con `npm run collaudo` vengono saltati senza interrompere il resto |
 | Il gioco sembra lento al primo capitolo | è la prima chiamata; dal secondo in poi ogni capitolo richiede pochi millisecondi |
 | Vuoi ricominciare da zero | ferma tutto, cancella `dati/` e riavvia con `npm run playtest` |
