@@ -5,22 +5,49 @@ Tutto è già pronto: non serve installare nulla.
 
 ---
 
-## 0. Link e browser
+## 0. Come aprire il gioco
 
-**Link pubblico della prova in questa sessione:**
+### A. Dentro questa sessione di Arena (per una prova al volo)
 
+Usa il pannello **«Anteprima dal vivo»** dell'interfaccia di Arena, quello collegato al processo
+**MasterRPG — Cronache Infinite**: è il link ufficiale della piattaforma e punta già alla porta
+giusta.
+
+> Il vecchio indirizzo `https://3000-i334ygdrwl1xq32mnbl81.e2b.app` che ti avevo indicato **non è
+> valido**: risponde «sandbox wasn't found». Era una mia deduzione dal nome interno della sandbox, non
+> un indirizzo verificato. La sandbox non è raggiungibile pubblicamente dall'esterno, quindi usa il
+> pannello di anteprima oppure la strada B.
+
+### B. Sul tuo computer (consigliato per un playtest vero)
+
+```bash
+git clone https://github.com/GiorgioScarpa86-dot/masterRPG.git
+cd masterRPG
+npm run playtest          # prepara la sessione e avvia il server
 ```
-https://3000-i334ygdrwl1xq32mnbl81.e2b.app
+
+Poi apri **http://localhost:3000** in Firefox. In console trovi anche l'indirizzo di rete locale
+(`http://192.168.x.x:3000`) da digitare sul telefono collegato alla stessa Wi-Fi.
+
+Serve solo **Node 18 o superiore**: zero dipendenze, nessun `npm install`.
+
+### C. Link pubblico, per far giocare qualcuno che non è sulla tua rete
+
+```bash
+npm run playtest -- --pubblico
 ```
 
-**Browser**: **Firefox va benissimo**, anzi è consigliato (dall'ultima versione;
-in generale 113 o superiore). Funzionano anche Chrome, Edge e Safari 16.4+.
-Nessuno di questi richiede installazioni, estensioni o account: il gioco non
-carica nulla da Internet e non usa cookie. Dettagli e verifiche in
+Il comando cerca `cloudflared` (gratuito, nessun account) o `ngrok` sul tuo computer e apre un
+indirizzo `https://…` condivisibile con chiunque, anche dal telefono e in Firefox. Se non li trova,
+stampa come installarli in dieci secondi. Il link vive finché la sessione resta aperta: chiudendo con
+`Ctrl+C` il tunnel si chiude da solo.
+
+### Browser
+
+**Firefox va benissimo**, anzi è consigliato (dall'ultima versione; in generale 113 o superiore).
+Funzionano anche Chrome, Edge e Safari 16.4+. Nessuno richiede installazioni, estensioni o account:
+il gioco non carica nulla da Internet e non usa cookie. Dettagli in
 [`docs/06-browser.md`](docs/06-browser.md).
-
-Se il link non si apre, usa il pannello **Anteprima dal vivo** di Arena oppure
-avvia il gioco in locale e apri `http://localhost:3000`.
 
 ---
 
@@ -124,6 +151,8 @@ rete Wi-Fi. La partita è la stessa, i salvataggi sono sul computer.
 | `Porta 3000 già in uso` | `npm run playtest -- --porta 8080` |
 | Il telefono non apre la pagina | controlla che sia sulla stessa Wi-Fi; il firewall del computer deve permettere la porta |
 | Pagina bianca su un browser vecchio | `npm run prova:compatibilita` dice quale versione minima serve e se il problema è il tipo MIME |
+| Il link pubblico non si apre | il tunnel è stato chiuso, oppure `cloudflared`/`ngrok` non è installato: rilancia `npm run playtest -- --pubblico` |
+| Un amico fuori rete vuole giocare | `npm run playtest -- --pubblico` sul tuo computer: ottieni un indirizzo `https://…` da mandargli |
 | I collaudi jsdom dicono che manca jsdom | `npm install --no-save jsdom` (serve **solo** per i collaudi, mai per giocare); con `npm run collaudo` vengono saltati senza interrompere il resto |
 | Il gioco sembra lento al primo capitolo | è la prima chiamata; dal secondo in poi ogni capitolo richiede pochi millisecondi |
 | Vuoi ricominciare da zero | ferma tutto, cancella `dati/` e riavvia con `npm run playtest` |

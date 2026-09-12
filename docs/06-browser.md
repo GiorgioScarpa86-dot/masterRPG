@@ -7,34 +7,38 @@ dal collaudo automatico.
 
 ---
 
-## 1. Il link per la prova
+## 1. Come aprire il gioco
 
-### Se stai provando dentro questa sessione di Arena
+### Dentro la sessione di Arena
 
-```
-https://3000-i334ygdrwl1xq32mnbl81.e2b.app
-```
+Usa il pannello **«Anteprima dal vivo»** collegato al processo del gioco: è il link della
+piattaforma.
 
-È l'indirizzo pubblico del server di gioco avviato in questa sessione: apri questo
-indirizzo in Firefox (o in qualunque browser, anche dal telefono) e giochi
-direttamente. Il server è già in ascolto e accetta richieste per quell'host,
-verificato.
+> ⚠️ L'indirizzo `https://3000-i334ygdrwl1xq32mnbl81.e2b.app` indicato in una versione precedente di
+> questo documento **non è valido** (risponde «sandbox wasn't found»): era una deduzione dal nome
+> interno della sandbox, non un indirizzo verificato. La sandbox di questa sessione non espone la
+> porta all'esterno, e l'uscita di rete è limitata a GitHub e al registro npm, quindi non è possibile
+> aprirvi nemmeno un tunnel da dentro.
 
-> Nota: quel link vive finché la sessione e il processo del server restano attivi.
-> Se non si apre, usa il pannello **Anteprima dal vivo** dell'interfaccia di Arena
-> (mostra la stessa porta 3000), oppure avvia il gioco sul tuo computer seguendo il
-> punto 2.
-
-### Se vuoi provarlo sul tuo computer
+### Sul tuo computer (strada consigliata per un playtest vero)
 
 ```bash
-cd masterRPG
-npm run playtest          # prepara la sessione e avvia il server
+git clone https://github.com/GiorgioScarpa86-dot/masterRPG.git && cd masterRPG
+npm run playtest          # avvia la sessione e stampa le istruzioni
 ```
 
-Poi apri **http://localhost:3000** in Firefox. In console trovi anche
-l'indirizzo di rete locale (`http://192.168.x.x:3000`) da digitare sul telefono:
-telefono e computer devono essere sulla stessa Wi-Fi.
+Apri **http://localhost:3000** in Firefox. Serve solo Node 18+: zero dipendenze.
+
+### Link pubblico per giocatori fuori rete
+
+```bash
+npm run playtest -- --pubblico
+```
+
+Apre un tunnel (`cloudflared`, gratuito e senza account, oppure `ngrok`) e stampa un indirizzo
+`https://…` da condividere: funziona in Firefox, su qualunque dispositivo, anche dal telefono. Se
+nessuno dei due strumenti è installato, il comando spiega come installarli. Il tunnel vive finché la
+sessione resta aperta.
 
 ---
 

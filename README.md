@@ -37,6 +37,12 @@ l'indirizzo da aprire (anche dal telefono, sulla stessa rete Wi-Fi) e alla
 chiusura con `Ctrl+C` stampa il **riepilogo della sessione**. Il protocollo
 completo è in **[`docs/05-playtest.md`](docs/05-playtest.md)**.
 
+Per far giocare qualcuno che non è sulla tua rete:
+
+```bash
+npm run playtest -- --pubblico      # apre un link https condivisibile (cloudflared/ngrok)
+```
+
 Nessun `npm install` necessario: il progetto usa **solo moduli nativi Node** (`node:http`, `node:fs`, `fetch`).
 È possibile forzare una porta diversa con la variabile d'ambiente `PORT`.
 

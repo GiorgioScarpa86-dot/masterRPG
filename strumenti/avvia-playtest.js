@@ -19,6 +19,8 @@
  *   node strumenti/avvia-playtest.js --conserva          # non azzera gli eventi
  *   node strumenti/avvia-playtest.js --saga-vuota        # prova anche la creazione
  *   node strumenti/avvia-playtest.js --produzione        # come un giocatore vero
+ *   node strumenti/avvia-playtest.js --pubblico          # apre un link condivisibile
+ *                                                        # (cloudflared o ngrok)
  */
 
 import { spawn } from "node:child_process";
@@ -37,6 +39,7 @@ const PORTA = Number(valore("--porta", process.env.PORTA || 3000));
 const CONSERVA = argomenti.includes("--conserva");
 const SAGA_VUOTA = argomenti.includes("--saga-vuota");
 const PRODUZIONE = argomenti.includes("--produzione");
+const PUBBLICO = argomenti.includes("--pubblico") || argomenti.includes("--tunnel");
 
 const linea = "─".repeat(68);
 const passi = [];
@@ -98,6 +101,91 @@ const attendiAvvio = new Promise((risolvi, rifiuta) => {
     if (!avviato) rifiuta(new Error(`Il server è terminato con codice ${codice}.`));
   });
 });
+
+/**
+ * Apre un tunnel pubblico verso la partita, per far giocare qualcuno che non è
+ * sulla stessa rete. Cerca uno strumento già installato sul computer:
+ *
+ *   · cloudflared  →  https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+ *                     (gratuito, nessun account:  cloudflared tunnel --url http://localhost:PORTA)
+ *   · ngrok        →  richiede un account gratuito e il comando `ngrok config add-authtoken`
+ *
+ * Se non trova nulla, spiega come installarli. Non prova a scaricare niente da
+ * solo: installare software è una decisione di chi ospita il test.
+ */
+function strumentoDisponibile(comando) {
+  return new Promise((risolvi) => {
+    const figlio = spawn(comando, ["--version"], { stdio: "ignore" });
+    figlio.on("error", () => risolvi(false));
+    figlio.on("exit", () => risolvi(true));
+  });
+}
+
+async function apriTunnel() {
+  const cloudflared = await strumentoDisponibile("cloudflared");
+  const ngrok = cloudflared ? false : await strumentoDisponibile("ngrok");
+
+  if (!cloudflared && !ngrok) {
+    console.log(`\n${linea}`);
+    console.log("  LINK PUBBLICO — serve uno strumento di tunnel");
+    console.log(linea);
+    console.log("  Sul tuo computer non ho trovato né cloudflared né ngrok.");
+    console.log("  Scegli uno dei due (una volta sola, pochi secondi):\n");
+    console.log("  · cloudflared  (consigliato: gratuito e senza account)");
+    console.log("      macOS:    brew install cloudflared");
+    console.log("      Windows:  winget install --id Cloudflare.cloudflared");
+    console.log("      Linux:    https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/");
+    console.log("      poi:      cloudflared tunnel --url http://localhost:" + PORTA);
+    console.log("");
+    console.log("  · ngrok  (richiede un account gratuito)");
+    console.log("      npm install -g ngrok   →   ngrok config add-authtoken <token>   →   ngrok http " + PORTA);
+    console.log("");
+    console.log("  In entrambi i casi ottieni un indirizzo https pubblico da mandare a chi");
+    console.log("  deve giocare: apri quello in Firefox, anche dal telefono, da qualunque rete.");
+    return null;
+  }
+
+  const comando = cloudflared ? "cloudflared" : "ngrok";
+  const argomentiTunnel = cloudflared
+    ? ["tunnel", "--url", `http://localhost:${PORTA}`, "--no-autoupdate"]
+    : ["http", String(PORTA), "--log=stdout"];
+
+  console.log(`\n  Apro il tunnel pubblico con ${comando}…`);
+  const tunnel = spawn(comando, argomentiTunnel, { stdio: ["ignore", "pipe", "pipe"] });
+
+  return await new Promise((risolvi) => {
+    let trovato = null;
+    let uscita = "";
+    const esamina = (dati) => {
+      uscita += String(dati);
+      const indirizzo = uscita.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/) || uscita.match(/url=https:\/\/[^\s]+/);
+      if (indirizzo && !trovato) {
+        trovato = indirizzo[0].replace("url=", "");
+        console.log(`\n${linea}`);
+        console.log("  LINK PUBBLICO PER IL PLAYTEST");
+        console.log(linea);
+        console.log(`  ${trovato}`);
+        console.log("");
+        console.log("  Aprilo in Firefox (o su qualsiasi dispositivo, anche dal telefono).");
+        console.log("  Vale solo finché questa sessione resta aperta: chiudendo con Ctrl+C");
+        console.log("  il tunnel si chiude da solo.");
+        console.log(linea);
+        risolvi(tunnel);
+      }
+    };
+    tunnel.stdout.on("data", esamina);
+    tunnel.stderr.on("data", esamina);
+    tunnel.on("error", () => risolvi(null));
+    tunnel.on("exit", (codice) => {
+      if (!trovato) {
+        console.log(`\n  ⚠ ${comando} si è chiuso (codice ${codice}) senza fornire un indirizzo.`);
+        console.log("    Con ngrok serve prima:  ngrok config add-authtoken <il-tuo-token>");
+        risolvi(null);
+      }
+    });
+    setTimeout(() => { if (!trovato) { console.log("\n  ⚠ Il tunnel non ha risposto entro 20 secondi: continuo senza link pubblico."); risolvi(null); } }, 20000);
+  });
+}
 
 /** Prepara una saga di prova pronta da giocare. */
 async function preparaSaga() {
@@ -165,6 +253,11 @@ if (indirizzi.length) {
   console.log("  Dal telefono:      collega il computer a una rete Wi-Fi per giocare da mobile");
 }
 
+let tunnel = null;
+if (PUBBLICO) {
+  tunnel = await apriTunnel();
+}
+
 console.log(`\n${linea}`);
 console.log("  DURANTE LA SESSIONE");
 console.log(linea);
@@ -174,6 +267,8 @@ console.log("  · Al terzo capitolo comparirà da solo il modulo «Come sta anda
 console.log("  · Dal pulsante «📊 Riepilogo playtest» vedi subito i numeri del test.");
 console.log("  · Un capitolo richiede fra 150 e 200 parole: la sessione giusta sta fra");
 console.log("    5 e 8 capitoli, cioè fra 10 e 20 minuti.");
+if (PUBBLICO) console.log("  · Il link pubblico è aperto: chiunque lo abbia può giocare, in sola lettura dei propri dati.");
+console.log("  · Non serve nessun browser particolare: Firefox va benissimo.");
 
 console.log(`\n${linea}`);
 console.log("  ALLA FINE DELLA SESSIONE");
@@ -188,6 +283,7 @@ async function chiudi() {
   if (inChiusura) return;
   inChiusura = true;
   console.log("\n\n  Sessione terminata. Preparo il riepilogo…\n");
+  if (tunnel) tunnel.kill("SIGTERM");
   server.kill("SIGTERM");
   await new Promise((r) => setTimeout(r, 400));
   const riepilogo = spawn(process.execPath, [path.join(RADICE, "strumenti", "riepilogo-playtest.js")], {
