@@ -1,0 +1,10 @@
+# Dipendenze (il progetto non ne usa, ma per sicurezza)
+node_modules/
+
+# Dati di gioco generati a runtime (salvataggi delle saghe)
+dati/
+
+# Sistema
+.DS_Store
+*.log
+.env
