@@ -15,6 +15,12 @@ degli eventi e modulo di parere.
 
 ## 1. Avvio rapido
 
+**Browser supportati**: Firefox 113+ (**consigliato**), Chrome/Edge/Brave 111+,
+Safari 16.4+. Il gioco non carica nulla da Internet, non usa cookie e non
+dipende da funzionalità di un solo browser: dettagli verificati in
+[`docs/06-browser.md`](docs/06-browser.md).
+
+
 ```bash
 node server/index.js          # oppure: npm start
 # → http://localhost:3000
@@ -140,6 +146,7 @@ masterRPG/
 │   ├── riepilogo-playtest.js    # numeri e pareri della sessione
 │   ├── prova-motore.js          # 150 capitoli: vincoli, crediti, memoria
 │   ├── prova-illustrazioni.js   # scene, determinismo, assi, rotte REST
+│   ├── prova-compatibilita.js   # versioni minime per Firefox, Chrome e Safari
 │   ├── prova-mobile.js          # layout da telefono: 39 controlli statici
 │   ├── prova-interfaccia.js     # flusso di gioco completo (richiede jsdom)
 │   ├── prova-anticrisi.js       # garanzia anti-blocco con saldo esaurito
@@ -149,7 +156,8 @@ masterRPG/
     ├── 02-architettura.md
     ├── 03-modello-dati.md
     ├── 04-illustrazioni-e-relazioni.md
-    └── 05-playtest.md
+    ├── 05-playtest.md
+    └── 06-browser.md
 ```
 
 Documentazione dei flussi: **[`docs/01-flussi-di-lavoro.md`](docs/01-flussi-di-lavoro.md)**.
@@ -196,6 +204,8 @@ npm run prova:motore         # 150 capitoli: lunghezza 150-200 parole, 3-4 scelt
                              # dialoghi bilanciati, sinossi, crediti, ricarica d'emergenza
 npm run prova:illustrazioni  # 5 scene per capitolo, determinismo, XML valido,
                              # tutte le ambientazioni, assi dell'albero, rotte REST
+npm run prova:compatibilita  # Firefox/Chrome/Safari: versioni minime, tipi MIME,
+                             # SVG ben formati per il parser di Firefox
 npm run prova:mobile         # layout da telefono: nessuno scorrimento orizzontale,
                              # bersagli tattili, modali a tutta larghezza
 npm run verifica             # controllo statico del contratto fra HTML e JavaScript
@@ -216,6 +226,7 @@ Esito dell'ultima esecuzione — saga di 150 capitoli generata in 2 secondi:
 |---|---|
 | `prova-motore.js 150` | **1076/1076** verifiche · 28 000+ parole · 460 battute · 5 NPC · 6 luoghi |
 | `prova-illustrazioni.js` | **16 444** verifiche · 60 scene distinte · 7 ambientazioni × 7 momenti · 0,5 ms per scena |
+| `prova-compatibilita.js` | **52/52** verifiche su Firefox, Chrome e Safari (versioni minime, MIME, SVG) |
 | `prova-mobile.js` | **39/39** verifiche sul layout da telefono |
 | `prova-interfaccia.js` (jsdom) | **87** verifiche · flusso completo, galleria, albero di fiducia, modali |
 | `prova-anticrisi.js` (jsdom) | **superato** · saldo esaurito → ricarica gratuita → la storia riprende |

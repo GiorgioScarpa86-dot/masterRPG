@@ -18,7 +18,8 @@
     "prova:anticrisi": "node strumenti/prova-anticrisi.js",
     "verifica": "node strumenti/verifica-html.js",
     "collaudo": "node strumenti/collaudo.js",
-    "collaudo:veloce": "node strumenti/collaudo.js --veloce"
+    "collaudo:veloce": "node strumenti/collaudo.js --veloce",
+    "prova:compatibilita": "node strumenti/prova-compatibilita.js"
   },
   "engines": {
     "node": ">=18"

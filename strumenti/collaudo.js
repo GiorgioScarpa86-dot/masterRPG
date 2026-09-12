@@ -125,6 +125,7 @@ const percorsoJsdom = jsdom || undefined;
 
 // ── Passi ──
 await passo("Contratto fra HTML e JavaScript", process.execPath, ["strumenti/verifica-html.js"]);
+await passo("Compatibilità con i browser", process.execPath, ["strumenti/prova-compatibilita.js", BASE]);
 await passo("Layout da telefono (statico)", process.execPath, ["strumenti/prova-mobile.js"]);
 await passo("Illustrazioni di scena e albero di fiducia", process.execPath, ["strumenti/prova-illustrazioni.js", String(VELOCE ? 6 : 12)]);
 await passo(`Motore narrativo (${CAPITOLI} capitoli)`, process.execPath, ["strumenti/prova-motore.js", String(CAPITOLI)]);

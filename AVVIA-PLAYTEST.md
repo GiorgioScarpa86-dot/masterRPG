@@ -5,6 +5,25 @@ Tutto è già pronto: non serve installare nulla.
 
 ---
 
+## 0. Link e browser
+
+**Link pubblico della prova in questa sessione:**
+
+```
+https://3000-i334ygdrwl1xq32mnbl81.e2b.app
+```
+
+**Browser**: **Firefox va benissimo**, anzi è consigliato (dall'ultima versione;
+in generale 113 o superiore). Funzionano anche Chrome, Edge e Safari 16.4+.
+Nessuno di questi richiede installazioni, estensioni o account: il gioco non
+carica nulla da Internet e non usa cookie. Dettagli e verifiche in
+[`docs/06-browser.md`](docs/06-browser.md).
+
+Se il link non si apre, usa il pannello **Anteprima dal vivo** di Arena oppure
+avvia il gioco in locale e apri `http://localhost:3000`.
+
+---
+
 ## 1. Comandi
 
 ```bash
@@ -104,6 +123,7 @@ rete Wi-Fi. La partita è la stessa, i salvataggi sono sul computer.
 |---|---|
 | `Porta 3000 già in uso` | `npm run playtest -- --porta 8080` |
 | Il telefono non apre la pagina | controlla che sia sulla stessa Wi-Fi; il firewall del computer deve permettere la porta |
+| Pagina bianca su un browser vecchio | `npm run prova:compatibilita` dice quale versione minima serve e se il problema è il tipo MIME |
 | I collaudi jsdom dicono che manca jsdom | `npm install --no-save jsdom` (serve **solo** per i collaudi, mai per giocare); con `npm run collaudo` vengono saltati senza interrompere il resto |
 | Il gioco sembra lento al primo capitolo | è la prima chiamata; dal secondo in poi ogni capitolo richiede pochi millisecondi |
 | Vuoi ricominciare da zero | ferma tutto, cancella `dati/` e riavvia con `npm run playtest` |

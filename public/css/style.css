@@ -1065,3 +1065,43 @@ select option { background: var(--superficie-solida); color: var(--testo); }
 .campo select.input-testo { width: 100%; }
 
 @media (max-width: 620px) { .stella { font-size: 2.2rem; } }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPATIBILITÀ FIREFOX
+   Firefox non supporta ::-webkit-scrollbar (le barre restano quelle di sistema,
+   più chiare): queste due righe le rendono coerenti con il tema scuro.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, .22) rgba(255, 255, 255, .04);
+}
+
+/* Rete di sicurezza per browser senza color-mix() (Firefox < 113, Safari < 16.2,
+   Chrome < 111). Senza questo blocco il titolo del capitolo e quello del
+   saldo — che usano un gradiente ritagliato sul testo — risulterebbero
+   invisibili, perché il colore è trasparente e il gradiente non verrebbe
+   disegnato. */
+@supports not (color: color-mix(in srgb, #000, #fff)) {
+  #sfondo {
+    background:
+      radial-gradient(1100px 620px at 12% -10%, rgba(192, 132, 252, .30), transparent 65%),
+      radial-gradient(900px 540px at 92% 6%, rgba(52, 211, 153, .22), transparent 62%),
+      radial-gradient(1200px 800px at 50% 115%, rgba(90, 70, 190, .22), transparent 70%),
+      linear-gradient(180deg, var(--sfondo-1), var(--sfondo-0) 70%);
+  }
+  .vetrina h1, .capitolo-titolo {
+    background: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    color: var(--testo);
+  }
+  .saldo-grande { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--attenzione); }
+  .badge.llm { border-color: var(--accento-2); background: rgba(255, 255, 255, .08); }
+  .badge.locale { border-color: var(--accento-1); background: rgba(255, 255, 255, .08); }
+  .btn.primary { box-shadow: var(--ombra-tenue); }
+  .tono[aria-checked="true"], .scheda-tab.attiva { background: rgba(255, 255, 255, .12); }
+  .scelta:hover:not(:disabled), .relazione-bottone:hover { border-color: var(--accento-1); }
+  .scena-card:hover .scena-cornice, .scena-card:focus-visible .scena-cornice { border-color: var(--accento-1); box-shadow: var(--ombra-tenue); }
+  .capitolo-testo .battuta { color: var(--accento-2); }
+  ::selection { background: rgba(192, 132, 252, .45); }
+}
