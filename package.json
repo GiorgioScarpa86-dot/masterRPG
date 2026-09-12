@@ -16,6 +16,7 @@
     "prova:mobile": "node strumenti/prova-mobile.js",
     "prova:interfaccia": "node strumenti/prova-interfaccia.js",
     "prova:anticrisi": "node strumenti/prova-anticrisi.js",
+    "prova:qr": "node strumenti/prova-qr.js",
     "verifica": "node strumenti/verifica-html.js",
     "collaudo": "node strumenti/collaudo.js",
     "collaudo:veloce": "node strumenti/collaudo.js --veloce",

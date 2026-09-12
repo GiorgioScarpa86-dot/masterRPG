@@ -33,9 +33,14 @@ npm run playtest              # prepara tutto e stampa le istruzioni per il gioc
 ```
 
 Azzera i dati di prova, prepara una saga già pronta, avvia il server, mostra
-l'indirizzo da aprire (anche dal telefono, sulla stessa rete Wi-Fi) e alla
-chiusura con `Ctrl+C` stampa il **riepilogo della sessione**. Il protocollo
-completo è in **[`docs/05-playtest.md`](docs/05-playtest.md)**.
+l'indirizzo da aprire e un **codice QR** da inquadrare col telefono (stessa rete
+Wi‑Fi, nessun indirizzo da digitare) e alla chiusura con `Ctrl+C` stampa il
+**riepilogo della sessione**. Il protocollo completo è in
+**[`docs/05-playtest.md`](docs/05-playtest.md)**.
+
+> 🧑‍🏫 **Non sei un programmatore?** La **[`GUIDA-PLAYTEST-FACILE.md`](GUIDA-PLAYTEST-FACILE.md)**
+> spiega passo per passo come installare Node.js, scaricare il gioco, avviarlo e giocare
+> dal telefono Android — dalla prima riga di comando in poi, senza dare nulla per scontato.
 
 Per far giocare qualcuno che non è sulla tua rete:
 
@@ -133,16 +138,17 @@ masterRPG/
 │   ├── stato/
 │   │   ├── modello.js           # creazione e mutazione dello stato di partita
 │   │   ├── memoria.js           # State Engine: sinossi, relazioni, inventario, digest
-│   │   └── archivio.js          # persistenza su file JSON (dati/partite/*.json)
-│   └── crediti/
-│       └── portafoglio.js       # Token Storia: bonus, spesa, ricarica gratuita
-│   ├── stato/
 │   │   ├── relazioni.js         # albero di fiducia: assi, quadranti, tappe, storico
+│   │   └── archivio.js          # persistenza su file JSON (dati/partite/*.json)
 │   ├── illustrazioni/
 │   │   ├── palette.js           # cieli per momento, sfondi per ambientazione, accenti
 │   │   └── scene.js             # motore SVG: 5 scene per capitolo, figure, cornici
-│   └── playtest/
-│       └── registro.js          # registro locale degli eventi di playtest (JSONL)
+│   ├── crediti/
+│   │   └── portafoglio.js       # Token Storia: bonus, spesa, ricarica gratuita
+│   ├── playtest/
+│   │   └── registro.js          # registro locale degli eventi di playtest (JSONL)
+│   └── utilita/
+│       └── qr.js                # codificatore QR senza dipendenze (telefono)
 ├── public/                      # interfaccia (nessun build step)
 │   ├── index.html
 │   ├── css/style.css
@@ -154,9 +160,12 @@ masterRPG/
 │   ├── prova-illustrazioni.js   # scene, determinismo, assi, rotte REST
 │   ├── prova-compatibilita.js   # versioni minime per Firefox, Chrome e Safari
 │   ├── prova-mobile.js          # layout da telefono: 39 controlli statici
+│   ├── prova-qr.js              # codice QR: confronto, rilettura, correzione d'errore
 │   ├── prova-interfaccia.js     # flusso di gioco completo (richiede jsdom)
 │   ├── prova-anticrisi.js       # garanzia anti-blocco con saldo esaurito
 │   └── verifica-html.js         # contratto fra HTML e JavaScript
+├── GUIDA-PLAYTEST-FACILE.md     # guida passo-passo per chi non programma (e per Android)
+├── AVVIA-PLAYTEST.md            # istruzioni operative in una pagina
 └── docs/                        # modellazione dei flussi e architettura
     ├── 01-flussi-di-lavoro.md
     ├── 02-architettura.md
@@ -214,6 +223,8 @@ npm run prova:compatibilita  # Firefox/Chrome/Safari: versioni minime, tipi MIME
                              # SVG ben formati per il parser di Firefox
 npm run prova:mobile         # layout da telefono: nessuno scorrimento orizzontale,
                              # bersagli tattili, modali a tutta larghezza
+npm run prova:qr             # codice QR del playtest: matrici a confronto con una
+                             # libreria di riferimento, rilettura e correzione d'errore
 npm run verifica             # controllo statico del contratto fra HTML e JavaScript
 ```
 
@@ -250,6 +261,8 @@ Esito dell'ultima esecuzione — saga di 150 capitoli generata in 2 secondi:
 | `npm run playtest -- --saga-vuota` | Prova anche il percorso di creazione della saga. |
 | `npm run playtest -- --conserva` | Non azzera il registro (più sessioni consecutive). |
 | `npm run playtest -- --produzione` | Come un giocatore vero: nessuna modalità di prova. |
+| `npm run playtest -- --pubblico` | Apre un link `https://…` condivisibile (cloudflared/ngrok) per chi non è sulla stessa rete. |
+| `npm run playtest`, codice QR | Il terminale mostra il QR dell'indirizzo di rete locale: si inquadra col telefono e il gioco si apre senza digitare nulla. |
 
 Il gioco registra gli eventi **solo in locale**, in `dati/playtest/eventi-*.jsonl`, senza dati
 personali. Protocollo completo, domande da fare e griglia di interpretazione:

@@ -9,8 +9,8 @@
  *   3. avvia il server sulla porta scelta (3000 per impostazione predefinita);
  *   4. prepara una saga di prova, così chi gioca non deve configurare nulla
  *      (con --saga-vuota si parte invece dalla schermata di creazione);
- *   5. stampa le istruzioni da leggere ad alta voce e l'indirizzo da aprire,
- *      anche in rete locale per far giocare dal telefono;
+ *   5. stampa le istruzioni da leggere ad alta voce, l'indirizzo da aprire e un
+ *      codice QR da inquadrare col telefono per giocare senza digitare nulla;
  *   6. alla chiusura (Ctrl+C) mostra il riepilogo della sessione.
  *
  * Uso:
@@ -28,6 +28,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { qrTesto } from "../server/utilita/qr.js";
 
 const RADICE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const argomenti = process.argv.slice(2);
@@ -251,6 +252,26 @@ if (indirizzi.length) {
   }
 } else {
   console.log("  Dal telefono:      collega il computer a una rete Wi-Fi per giocare da mobile");
+}
+
+// ── 4b. Codice QR per il telefono ──
+// Invece di far digitare un indirizzo IP, si mostra un codice QR: basta
+// inquadrarlo con la fotocamera del telefono per aprire il gioco.
+if (indirizzi.length) {
+  const perTelefono = indirizzi[0];
+  console.log(`\n${linea}`);
+  console.log("  PER GIOCARE DAL TELEFONO, SENZA DIGITARE NULLA");
+  console.log(linea);
+  console.log(`  Inquadra questo codice con la fotocamera del telefono: si apre ${perTelefono}`);
+  console.log("  Telefono e computer devono essere collegati alla stessa rete Wi-Fi.\n");
+  for (const riga of qrTesto(perTelefono, { margine: 4 })) console.log(`      ${riga}`);
+  console.log("\n  Se la fotocamera non lo legge, apri a mano l'indirizzo qui sopra.");
+} else {
+  console.log(`\n${linea}`);
+  console.log("  PER GIOCARE DAL TELEFONO");
+  console.log(linea);
+  console.log("  Collega il computer a una rete Wi-Fi: al prossimo avvio comparirà qui");
+  console.log("  un codice QR da inquadrare con la fotocamera del telefono.");
 }
 
 let tunnel = null;

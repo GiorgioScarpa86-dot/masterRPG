@@ -27,9 +27,15 @@ npm run playtest          # prepara la sessione e avvia il server
 ```
 
 Poi apri **http://localhost:3000** in Firefox. In console trovi anche l'indirizzo di rete locale
-(`http://192.168.x.x:3000`) da digitare sul telefono collegato alla stessa Wi-Fi.
+(`http://192.168.x.x:3000`) e il **codice QR** da inquadrare col telefono collegato alla stessa
+Wi-Fi: si apre il gioco senza digitare nulla.
 
 Serve solo **Node 18 o superiore**: zero dipendenze, nessun `npm install`.
+
+> 🧑‍🏫 **Mai usato Node? Non sei un programmatore?** Segui la
+> **[`GUIDA-PLAYTEST-FACILE.md`](GUIDA-PLAYTEST-FACILE.md)**: installazione di Node.js,
+> download del progetto, avvio e gioco da telefono Android spiegati clic per clic.
+> Se non hai `git`, la guida parte dal pulsante **Download ZIP** di GitHub.
 
 ### C. Link pubblico, per far giocare qualcuno che non è sulla tua rete
 
@@ -68,6 +74,21 @@ Non hai `npm`? Va bene lo stesso:
 ```bash
 node strumenti/avvia-playtest.js
 ```
+
+---
+
+## 1b. Giocare dal telefono
+
+1. Telefono e computer sulla **stessa rete Wi-Fi**.
+2. All'avvio del playtest, nel terminale compare il **codice QR** dell'indirizzo di rete locale.
+3. Apri la **fotocamera** del telefono, inquadra il codice, tocca il link: il gioco si apre in Chrome.
+4. Per averlo a portata di tocco: menu di Chrome → **Aggiungi a schermata Home**.
+
+Se il telefono non carica la pagina, la causa è quasi sempre il firewall di Windows (va concesso
+l'accesso a Node.js sulle **reti private**) oppure un router che isola i dispositivi: in quel caso
+la soluzione più rapida è collegare il computer all'**hotspot del telefono** e riavviare il playtest.
+Tutti i dettagli, con le alternative, sono nella
+**[`GUIDA-PLAYTEST-FACILE.md`](GUIDA-PLAYTEST-FACILE.md)** (capitolo 7).
 
 ### Varianti utili
 

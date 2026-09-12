@@ -8,7 +8,7 @@
  *
  * Comportamento:
  *   · avvia da sé il server su una porta libera se non è già attivo;
- *   · esegue verifica statica, layout da telefono, illustrazioni, motore;
+ *   · esegue verifica statica, layout da telefono, codice QR, illustrazioni, motore;
  *   · esegue i due collaudi con jsdom se la libreria è disponibile, altrimenti
  *     li salta con un avviso (jsdom serve solo ai collaudi, mai per giocare);
  *   · alla fine stampa un riepilogo e restituisce 0 solo se tutto è passato.
@@ -127,6 +127,7 @@ const percorsoJsdom = jsdom || undefined;
 await passo("Contratto fra HTML e JavaScript", process.execPath, ["strumenti/verifica-html.js"]);
 await passo("Compatibilità con i browser", process.execPath, ["strumenti/prova-compatibilita.js", BASE]);
 await passo("Layout da telefono (statico)", process.execPath, ["strumenti/prova-mobile.js"]);
+await passo("Codice QR per il telefono", process.execPath, ["strumenti/prova-qr.js"]);
 await passo("Illustrazioni di scena e albero di fiducia", process.execPath, ["strumenti/prova-illustrazioni.js", String(VELOCE ? 6 : 12)]);
 await passo(`Motore narrativo (${CAPITOLI} capitoli)`, process.execPath, ["strumenti/prova-motore.js", String(CAPITOLI)]);
 await passo("Garanzia anti-blocco dei crediti", process.execPath, ["strumenti/prova-anticrisi.js"], percorsoJsdom ? { JSDOM_PATH: percorsoJsdom } : {});
