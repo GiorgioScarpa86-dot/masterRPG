@@ -374,6 +374,34 @@
   </div>
 </div>
 
+<!-- ══════════════════════ MODALE: MODALITÀ PERSONAGGIO (chat con un NPC) ══════════════════════ -->
+<div id="modale-chat" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-chat">
+  <div class="modale-contenuto larga">
+    <header class="modale-intestazione">
+      <h2 id="titolo-chat">Modalità Personaggio</h2>
+      <button class="btn mini ghost chiudi-modale" data-chiudi="modale-chat">✕</button>
+    </header>
+
+    <div id="chat-profilo-npc" class="chat-profilo"></div>
+
+    <details class="chat-memoria-dettagli" open>
+      <summary>Cosa ricorda di te</summary>
+      <div id="chat-memoria" class="chat-memoria"></div>
+    </details>
+
+    <div id="chat-messaggi" class="chat-messaggi" aria-live="polite"></div>
+
+    <form id="chat-form" class="chat-form" autocomplete="off">
+      <label class="etichetta" for="chat-testo">Parla con <span id="chat-nome-npc">questo personaggio</span> <span class="aiuto">— gratis e senza limiti, come nella Character Mode</span></label>
+      <div class="chat-form-riga">
+        <textarea id="chat-testo" rows="2" maxlength="400" placeholder="Scrivi ciò che dici o fai… (Invio per inviare, Maiusc+Invio per andare a capo)"></textarea>
+        <button id="btn-chat-invia" type="submit" class="btn primary" disabled>Invia ➤</button>
+      </div>
+      <p class="contatore"><span id="conteggio-chat">0</span>/400 caratteri</p>
+    </form>
+  </div>
+</div>
+
 <!-- ══════════════════════ MODALE: SCELTA DI AZIONE (battuta) ══════════════════════ -->
 <div id="modale-conferma" class="modale nascosto" role="dialog" aria-modal="true" aria-labelledby="titolo-conferma">
   <div class="modale-contenuto stretto">

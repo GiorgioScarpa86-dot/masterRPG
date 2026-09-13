@@ -19,13 +19,18 @@ server/index.js ─────────── server HTTP, routing statico, 
         ├── server/stato/archivio.js ─────── CRUD partite su disco
         ├── server/stato/modello.js ──────── creazione/mutazione dello stato
         ├── server/stato/memoria.js ──────── digest di memoria + sinossi + relazioni
-        └── server/motore/narratore.js ───── orchestrazione della generazione
-             ├── server/motore/prompt.js ───────── prompt del Game Master (italiano)
+        │                                     + memoria profonda NPC + profilo giocatore
+        │                                     + richiamo dei ricordi pertinenti
+        └── server/motore/narratore.js ───── orchestrazione: capitoli E Modalità Personaggio
+             ├── server/motore/prompt.js ───────── prompt v2.0 stile OOC (GM + personaggi)
              ├── server/motore/provider_llm.js ── chiamata all'LLM esterno
-             ├── server/motore/motore_locale.js ─ generatore procedurale offline
+             ├── server/motore/motore_locale.js ─ generatore procedurale offline (capitoli + battute)
              ├── server/motore/lessico.js ─────── banche lessicali per ambientazione
              └── server/motore/schema.js ──────── normalizzazione e vincoli di output
 ```
+
+Il design dell'intelligenza generativa — modellato su **OOC: The Playable Anime** — è
+documentato in [`07-intelligenza-stile-ooc.md`](07-intelligenza-stile-ooc.md).
 
 ## 3. Contratto del capitolo generato
 
@@ -57,6 +62,28 @@ Qualunque sia il provider, il narratore produce e valida sempre la stessa strutt
 
 `schema.js` normalizza l'output: garantisce 150–200 parole (o ne segnala lo scostamento), 3–4 opzioni,
 id univoci, valori numerici entro i limiti e delta coerenti con lo stato esistente.
+
+## 3b. Contratto della battuta (Modalità Personaggio)
+
+La conversazione diretta con un NPC (`POST /api/partite/:id/dialogo`) produce e valida sempre:
+
+```json
+{
+  "npc": "Mira",
+  "testo": "…risposta in prima persona, 30-90 parole, battute fra «…»…",
+  "emozione": "calore",
+  "deltaVincolo": 2, "deltaTensione": -1, "deltaRispetto": 0,
+  "fatto": "un ricordo nuovo conservato dall'NPC, oppure null",
+  "promessa": "una promessa nata nello scambio, oppure null",
+  "impressione": "come cambia l'idea che l'NPC ha del protagonista, oppure null",
+  "provenienza": "motore-locale",
+  "parole": 46
+}
+```
+
+Gli assi si muovono anche conversando (variazioni piccole, ±12 al massimo); la conversazione
+è gratuita, non avanza il capitolo e viene salvata in `partita.dialoghi[nomeNpc]`
+(ultimi 40 messaggi per personaggio).
 
 ## 4. Prompt del Game Master (estratto)
 

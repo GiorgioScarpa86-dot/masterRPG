@@ -1076,6 +1076,92 @@ select option { background: var(--superficie-solida); color: var(--testo); }
   scrollbar-color: rgba(255, 255, 255, .22) rgba(255, 255, 255, .04);
 }
 
+/* ─────────────────────── Modalità Personaggio (chat) ───────────────────────
+   Conversazione diretta con un NPC in stile OOC: bolle, memoria profonda,
+   assi del rapporto in tempo reale. */
+.modale-contenuto.larga { width: min(760px, 100%); display: flex; flex-direction: column; }
+
+.chat-profilo { display: grid; gap: .5rem; margin-bottom: .8rem; }
+.chat-profilo-riga { display: flex; align-items: center; gap: .7rem; }
+.chat-avatar { width: 52px; height: 52px; font-size: 1.4rem; }
+.chat-profilo-dati { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.chat-profilo-dati .chat-npc { font-family: var(--font-testo); font-size: 1.06rem; font-weight: 700; }
+.chat-gratis {
+  margin-left: auto;
+  font-size: .66rem;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  background: rgba(74, 222, 128, .15);
+  color: #9df0cd;
+  border: 1px solid rgba(74, 222, 128, .3);
+}
+.chat-assi { display: grid; gap: .3rem; }
+.chat-asse { display: grid; grid-template-columns: 64px 1fr 30px; align-items: center; gap: .5rem; font-size: .72rem; }
+.chat-asse-nome { color: var(--testo-fievole); }
+.chat-asse-valore { text-align: right; font-variant-numeric: tabular-nums; color: var(--testo-tenue); }
+
+.chat-memoria-dettagli { margin-bottom: .8rem; border: 1px solid var(--bordo); border-radius: var(--raggio-piccolo); padding: .5rem .7rem; }
+.chat-memoria-dettagli summary { cursor: pointer; font-size: .78rem; color: var(--testo-tenue); font-weight: 600; }
+.chat-memoria { display: grid; gap: .3rem; margin-top: .5rem; }
+.chat-ricordo { margin: 0; font-size: .76rem; color: var(--testo-tenue); padding-left: .5rem; border-left: 2px solid color-mix(in srgb, var(--accento-1) 40%, transparent); }
+.chat-ricordo.promessa { border-left-color: color-mix(in srgb, var(--accento-2) 55%, transparent); }
+.chat-ricordo.impressione { font-style: italic; color: var(--testo); border-left-color: var(--attenzione); }
+
+.chat-messaggi {
+  flex: 1;
+  min-height: 220px;
+  max-height: 46vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  padding: .6rem .3rem;
+  border-top: 1px solid var(--bordo);
+  border-bottom: 1px solid var(--bordo);
+  margin-bottom: .8rem;
+}
+.chat-vuoto { text-align: center; color: var(--testo-fievole); font-style: italic; font-size: .84rem; margin: auto 0; }
+.chat-bolla { display: flex; gap: .5rem; align-items: flex-end; }
+.chat-bolla.tua { justify-content: flex-end; }
+.chat-avatar-mini {
+  width: 30px; height: 30px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 9px;
+  font-size: .8rem; font-weight: 700; color: #0a0913;
+  background: linear-gradient(140deg, var(--accento-1), var(--accento-2));
+}
+.chat-bolla-corpo {
+  max-width: 78%;
+  padding: .55rem .75rem;
+  border-radius: 14px;
+  font-size: .86rem;
+  line-height: 1.5;
+  border: 1px solid var(--bordo);
+  background: rgba(255, 255, 255, .05);
+}
+.chat-bolla.tua .chat-bolla-corpo {
+  background: color-mix(in srgb, var(--accento-1) 20%, var(--superficie-solida));
+  border-color: color-mix(in srgb, var(--accento-1) 40%, transparent);
+}
+.chat-testo { margin: 0; font-family: var(--font-testo); white-space: pre-wrap; }
+.chat-testo.tenue { color: var(--testo-fievole); font-style: italic; }
+.chat-emozione { display: inline-block; margin-top: .35rem; font-size: .64rem; text-transform: uppercase; letter-spacing: .07em; color: var(--accento-2); }
+.chat-bolla.attesa .chat-bolla-corpo { opacity: .8; }
+
+.chat-form { display: grid; gap: .35rem; }
+.chat-form-riga { display: flex; gap: .6rem; align-items: flex-end; }
+.chat-form-riga textarea { flex: 1; resize: none; }
+.contatore { margin: 0; font-size: .7rem; color: var(--testo-fievole); }
+.btn-parla-npc { margin-top: .35rem; justify-self: start; }
+.npc-azioni { display: grid; gap: .4rem; margin-top: .4rem; }
+
+@media (max-width: 620px) {
+  .chat-bolla-corpo { max-width: 88%; }
+  .chat-messaggi { max-height: 40vh; }
+}
+
 /* Rete di sicurezza per browser senza color-mix() (Firefox < 113, Safari < 16.2,
    Chrome < 111). Senza questo blocco il titolo del capitolo e quello del
    saldo — che usano un gradiente ritagliato sul testo — risulterebbero
@@ -1103,5 +1189,8 @@ select option { background: var(--superficie-solida); color: var(--testo); }
   .scelta:hover:not(:disabled), .relazione-bottone:hover { border-color: var(--accento-1); }
   .scena-card:hover .scena-cornice, .scena-card:focus-visible .scena-cornice { border-color: var(--accento-1); box-shadow: var(--ombra-tenue); }
   .capitolo-testo .battuta { color: var(--accento-2); }
+  .chat-bolla.tua .chat-bolla-corpo { background: rgba(192, 132, 252, .16); border-color: rgba(192, 132, 252, .4); }
+  .chat-ricordo { border-left-color: rgba(192, 132, 252, .4); }
+  .chat-ricordo.promessa { border-left-color: rgba(52, 211, 153, .55); }
   ::selection { background: rgba(192, 132, 252, .45); }
 }

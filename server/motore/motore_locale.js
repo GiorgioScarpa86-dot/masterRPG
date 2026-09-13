@@ -14,7 +14,7 @@ import {
   DOMANDE_FINALI, TEMPLATE_SCELTE, SINTESI_INTENTO, MOMENTI, CONNETTIVI_TEMPO,
   vociPerRuolo, VOCI_PER_INTENTO
 } from "./lessico.js";
-import { DELTA_ASSI } from "../stato/relazioni.js";
+import { DELTA_ASSI, quadrante } from "../stato/relazioni.js";
 
 // ---------------------------------------------------------------------------
 // Banche interne di supporto alla composizione
@@ -584,6 +584,166 @@ function generaNotaRelazione(intento, azione) {
     generico: "Vi siete incontrati di nuovo, e stavolta è andata diversamente."
   };
   return `${mappe[intento] || mappe.generico}${corte ? ` (${corte})` : ""}`;
+}
+
+// ---------------------------------------------------------------------------
+// Modalità Personaggio — battuta in prima persona di un NPC (stile OOC)
+// ---------------------------------------------------------------------------
+
+// Reazioni del personaggio in base allo stato del rapporto (tono della voce)
+const REAZIONI_NPC = {
+  alleanza: [
+    "Il suo sguardo si fa più morbido, e per un istante abbassa la guardia.",
+    "Si lascia sfuggire un mezzo sorriso: con te può permetterselo.",
+    "Annuisce lentamente, come chi ha già deciso di ascoltarti davvero."
+  ],
+  rivalita: [
+    "Ti studia con un'intensità nuova: la sfida fra voi brucia ancora.",
+    "Incrocia le braccia, ma non distoglie lo sguardo. Non lo farebbe mai.",
+    "Un angolo della sua bocca si solleva: lo hai punto, e lo sa."
+  ],
+  ostilita: [
+    "I suoi occhi si stringono: la diffidenza è un muro difficile da scalare.",
+    "Resta immobile, ma ogni muscolo tradisce una cautela da animale ferito.",
+    "Ride piano, senza allegria: non è ancora il momento di fidarsi."
+  ],
+  crocevia: [
+    "Ti osserva come si osserva qualcosa di ancora indecifrabile.",
+    "Inclina appena la testa, soppesando ogni tua parola.",
+    "Per un attimo esita: non sa ancora da che parte stare con te."
+  ]
+};
+
+// Battute caratteristiche per quadrante del rapporto
+const BATTUTE_NPC = {
+  alleanza: [
+    "«Se c'è qualcuno che può capirlo, quello sei tu. Non dirlo in giro.»",
+    "«Non ti voltare adesso: qualunque cosa accada, io resto qui.»",
+    "«Mi fido di te. Ed è una parola che non regalo a nessuno.»"
+  ],
+  rivalita: [
+    "«Non credere che sia finita: la prossima volta non ti cedo il passo.»",
+    "«Sei l'unica persona che mi costringe a dare il meglio. Odiarlo non posso.»",
+    "«Dimmi la verità, almeno tu. Anche se fa male.»"
+  ],
+  ostilita: [
+    "«Dammi una sola ragione per crederti. Una. E sceglila bene.»",
+    "«Le parole costano poco. Sono i fatti che ti tengo d'occhio.»",
+    "«Non so cosa vuoi da me. Ma so cosa non ti darò facilmente.»"
+  ],
+  crocevia: [
+    "«Non so ancora cosa pensare di te. E questo, di solito, è un buon segno.»",
+    "«C'è qualcosa che non torna, in te. Continua a parlare, voglio capire cosa.»",
+    "«Forse ci siamo incontrati per un motivo. Forse no. Dimmelo tu.»"
+  ]
+};
+
+// Chiusure che tengono viva la conversazione (domande / provocazioni)
+const CHIUSURE_DIALOGO = [
+  "Fa' un passo verso di te, in attesa della risposta.",
+  "Rimane in silenzio, ma il suo sguardo pretende una risposta.",
+  "Si volta appena, lasciandoti l'ultima parola.",
+  "Alza un sopracciglio: la palla, adesso, è tua."
+];
+
+const EMOZIONI_PER_QUADRANTE = {
+  alleanza: ["calore", "fiducia", "intesa"],
+  rivalita: ["sfida", "rispetto riluttante", "tensione viva"],
+  ostilita: ["diffidenza", "cautela", "sospetto"],
+  crocevia: ["curiosità", "incertezza", "interesse"]
+};
+
+/**
+ * Genera la battuta in prima persona di un NPC (Modalità Personaggio).
+ * Deterministica rispetto al seme, con reazione al messaggio del giocatore.
+ * @param {object} opzioni
+ * @param {object} opzioni.partita     stato completo della partita
+ * @param {object} opzioni.relazione   voce di relazione dell'NPC
+ * @param {string} opzioni.messaggio   ciò che il giocatore ha scritto
+ */
+export function generaBattuta({ partita, relazione, messaggio }) {
+  const config = partita.configurazione;
+  const nomeProtagonista = config.protagonista?.nome || "Viandante";
+  const q = quadrante(relazione);
+
+  const rng = creaRng(creaSeme(
+    partita.id, "battuta", relazione.npc, String(messaggio),
+    String((partita.dialoghi?.[relazione.npc]?.messaggi?.length || 0))
+  ));
+
+  const reazioni = REAZIONI_NPC[q.id] || REAZIONI_NPC.crocevia;
+  const battute = BATTUTE_NPC[q.id] || BATTUTE_NPC.crocevia;
+
+  const reazione = scegli(rng, reazioni);
+  let battuta = scegliNuovo(rng, battute, partita.dialoghi?.[relazione.npc]?.testiUsati || []);
+
+  // Se il giocatore evoca un ricordo condiviso, l'NPC lo richiama (memoria profonda)
+  const fatti = relazione.memoria?.fatti || [];
+  const promesse = relazione.memoria?.promesse || [];
+  const ultimoRicordo = promesse.length ? promesse[promesse.length - 1] : fatti[fatti.length - 1];
+  const ecoRicordo = ultimoRicordo && rng() < 0.5
+    ? `Non ha dimenticato: ${promesse.length ? `«${ultimoRicordo}»` : `${ultimoRicordo.charAt(0).toLowerCase()}${ultimoRicordo.slice(1)}`.replace(/\.$/, "")}. `
+    : "";
+
+  // Riferimento al messaggio del giocatore: la battuta "risponde" davvero
+  // (stile OOC: i personaggi reagiscono a ogni parola)
+  const parole = String(messaggio).split(/\s+/).filter((p) => p.length >= 5);
+  const parolaScelta = parole.length
+    ? parole[Math.floor(rng() * parole.length)].replace(/[.,;!?«»]/g, "")
+    : "";
+  const eco = parolaScelta
+    ? `«${parolaScelta}», ripete piano, come a voler pesare quella parola. `
+    : "";
+
+  const chiusura = scegli(rng, CHIUSURE_DIALOGO);
+  const emozione = scegli(rng, EMOZIONI_PER_QUADRANTE[q.id] || EMOZIONI_PER_QUADRANTE.crocevia);
+
+  // Variazione degli assi: le conversazioni spostano il rapporto con gradualità
+  const caldo = /bene|amico|fiducia|grazie|insieme|prometto|ti credo/.test(String(messaggio).toLowerCase());
+  const duro = /bugiard|tradito|odio|colpa|mai più|vattene/.test(String(messaggio).toLowerCase());
+  const deltaVincolo = caldo ? 4 : duro ? -5 : q.id === "alleanza" ? 2 : 1;
+  const deltaTensione = duro ? 5 : q.id === "ostilita" ? 1 : -1;
+  const deltaRispetto = caldo ? 2 : q.id === "rivalita" ? 1 : 0;
+
+  const testo = [
+    reazione,
+    ecoRicordo ? ecoRicordo.trim() : null,
+    battuta,
+    eco ? eco.trim() : null,
+    chiusura
+  ].filter(Boolean).join(" ");
+
+  // Il ricordo che l'NPC conserva di questo scambio (memoria profonda)
+  let fatto = null;
+  let promessa = null;
+  if (duro) fatto = `Ricorda le parole dure che ${nomeProtagonista} gli ha rivolto.`;
+  else if (caldo) fatto = `Ricorda la sincerità che ${nomeProtagonista} gli ha mostrato parlando con lui.`;
+  else if (parolaScelta && rng() < 0.6) fatto = `Ha parlato con ${nomeProtagonista} di «${parolaScelta}».`;
+
+  // Una promessa esplicita del giocatore diventa un legame permanente
+  if (/prometto|giuro|te lo giuro/.test(String(messaggio).toLowerCase())) {
+    promessa = `Promessa: ${String(messaggio).slice(0, 90)}`;
+  }
+
+  const impressione = duro
+    ? "Dopo queste parole, sta più attento a fidarsi."
+    : caldo
+      ? "Dopo queste parole, sente il protagonista più vicino."
+      : "Ogni parola scambiata aggiunge un tassello all'idea che si sta facendo.";
+
+  return {
+    testo,
+    emozione,
+    deltaVincolo,
+    deltaTensione,
+    deltaRispetto,
+    fatto,
+    promessa,
+    impressione,
+    provenienza: "motore-locale",
+    parole: contaparole(testo),
+    meta: { quadrante: q.id, testiConsumati: [battuta] }
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -6,7 +6,13 @@
  *  2. costruire il "digest" di memoria che viene iniettato implicitamente
  *     in ogni prompt narrativo (evita allucinazioni e perdita di trama);
  *  3. esporre la scheda leggibile usata dal pannello
- *     "Scheda del Personaggio e Storia".
+ *     "Scheda del Personaggio e Storia";
+ *  4. MEMORIA PROFONDA in stile OOC: ogni NPC conserva fatti, promesse e
+ *     un'impressione del protagonista che evolve con capitoli e conversazioni;
+ *  5. PROFILO DEL GIOCATORE: lo stile di gioco (scelte, lunghezze, intenti)
+ *     viene osservato e iniettato nel prompt perché l'IA vi si adatti;
+ *  6. RICHIAMO DELLA MEMORIA: data un'azione, si selezionano i ricordi più
+ *     pertinenti (sinossi, obiettivi, ricordi degli NPC) da iniettare in scena.
  */
 
 import { quadrante } from "./relazioni.js";
@@ -15,6 +21,19 @@ const MAX_SINOSSI_DETTAGLIATA = 8;      // capitoli tenuti per esteso nella sino
 const MAX_CARATTERI_VOCE = 240;        // lunghezza massima di una voce di sinossi
 const MAX_PAROLE_RIASSUNTO_ANTICO = 150; // il riassunto compresso non cresce mai oltre
 const MAX_CARATTERI_DIGEST = 7000;     // limite di sicurezza del testo iniettato nel prompt
+const MAX_FATTI_NPC = 8;               // ricordi conservati per ogni NPC
+const MAX_PROMESSE_NPC = 4;            // promesse/segreti conservati per ogni NPC
+
+/** Parole troppo comuni per essere indizi di richiamo della memoria. */
+const STOPWORD_MEMORIA = new Set([
+  "il", "lo", "la", "i", "gli", "le", "un", "uno", "una", "di", "a", "da", "in", "con", "su", "per",
+  "tra", "fra", "e", "ed", "o", "ma", "che", "chi", "cui", "non", "del", "della", "dei", "delle",
+  "al", "alla", "ai", "alle", "dal", "dalla", "nel", "nella", "sul", "sulla", "sono", "era",
+  "dove", "come", "quando", "questo", "questa", "questi", "queste", "suo", "sua", "suoi", "sue",
+  "mio", "mia", "ci", "si", "ti", "mi", "vi", "ne", "più", "meno", "molto", "poco", "cosa",
+  "tutto", "tutti", "tutta", "tutte", "essere", "avere", "fare", "può", "possono", "anche", "ancora",
+  "voglio", "vorrei", "allora", "adesso", "qui", "lui", "lei", "noi", "voi", "loro", "dopo", "prima"
+]);
 
 /** Aggiunge la voce di sinossi del capitolo appena generato. */
 export function aggiungiSinossi(stato, numero, testo) {
@@ -80,6 +99,12 @@ export function digest(partita) {
   righe.push(`Vitali: Vita ${stato.vitali.vita}/100 · Energia ${stato.vitali.energia}/100 · Tensione ${stato.vitali.tensione}/100`);
   righe.push(`Luogo attuale: ${stato.luogo || "da definire"}`);
 
+  const profilo = descriviProfilo(stato.profiloGiocatore);
+  if (profilo.length) {
+    righe.push("=== PROFILO DEL GIOCATORE (adatta la narrazione al suo stile) ===");
+    for (const riga of profilo) righe.push(`  - ${riga}`);
+  }
+
   righe.push("Inventario:");
   if (!stato.inventario.length) {
     righe.push("  - (vuoto: il protagonista non possiede ancora nulla)");
@@ -99,6 +124,12 @@ export function digest(partita) {
       righe.push(`  - ${r.npc} — ${r.ruolo} · ${q.nome} · Vincolo ${r.vincolo ?? r.fiducia ?? 50} / Tensione ${r.tensione ?? 30} / Rispetto ${r.rispetto ?? 50}`);
       if (r.nota) righe.push(`      nota: ${r.nota}`);
       if (tappe) righe.push(`      tappe: ${tappe}`);
+      // Memoria profonda dell'NPC: ciò che ricorda davvero di te
+      const mem = r.memoria;
+      if (mem?.impressione) righe.push(`      impressione che ha di te: ${mem.impressione}`);
+      if (mem?.fatti?.length) righe.push(`      ricorda: ${mem.fatti.slice(-4).join(" · ")}`);
+      if (mem?.promesse?.length) righe.push(`      promesse fra voi: ${mem.promesse.join(" · ")}`);
+      if (mem?.ultimaConversazione) righe.push(`      ultima conversazione: cap. ${mem.ultimaConversazione.capitolo}, a proposito di «${mem.ultimaConversazione.argomento}»`);
     }
   }
 
@@ -189,8 +220,191 @@ export function scheda(partita) {
       riassuntoCompresso: memoria?.riassuntoCompresso || "",
       paroleTotali: memoria?.paroleTotali || 0,
       capitoliRiassunti: memoria?.capitoliRiassunti || 0
-    }
+    },
+    profiloGiocatore: stato.profiloGiocatore || null,
+    battuteDialogo: stato.contatori?.battute || 0
   };
+}
+
+// ---------------------------------------------------------------------------
+// Profilo del giocatore — "i personaggi si adattano al tuo stile" (stile OOC)
+// ---------------------------------------------------------------------------
+
+/** Struttura iniziale del profilo di stile del giocatore. */
+export function profiloIniziale() {
+  return {
+    azioni: 0,
+    scelteRapide: 0,
+    azioniLibere: 0,
+    stili: { audace: 0, prudente: 0, astuta: 0, empatica: 0 },
+    intenti: {},
+    lunghezzaTotale: 0
+  };
+}
+
+/**
+ * Osserva l'azione appena giocata e aggiorna il profilo di stile.
+ * Il profilo viene iniettato nel prompt perché il Game Master si adatti
+ * al modo di giocare della persona (come fanno i personaggi di OOC).
+ */
+export function aggiornaProfiloGiocatore(stato, azione, intento = null) {
+  if (!azione || typeof azione !== "object") return stato;
+  const profilo = stato.profiloGiocatore || (stato.profiloGiocatore = profiloIniziale());
+  profilo.azioni += 1;
+
+  if (azione.tipo === "scelta") {
+    profilo.scelteRapide += 1;
+    if (azione.tipoScelta && profilo.stili[azione.tipoScelta] !== undefined) {
+      profilo.stili[azione.tipoScelta] += 1;
+    }
+  } else if (azione.testo) {
+    profilo.azioniLibere += 1;
+    profilo.lunghezzaTotale += String(azione.testo).length;
+  }
+
+  if (intento) profilo.intenti[intento] = (profilo.intenti[intento] || 0) + 1;
+  return stato;
+}
+
+/** Descrizione leggibile del profilo, pronta per il prompt e per la scheda. */
+export function descriviProfilo(profilo) {
+  if (!profilo || !profilo.azioni) return [];
+  const righe = [];
+  righe.push(
+    `${profilo.azioni} azioni giocate finora: ${profilo.azioniLibere} personalizzate e ${profilo.scelteRapide} scelte rapide.`
+  );
+
+  const stili = Object.entries(profilo.stili || {})
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1]);
+  if (stili.length) {
+    const [stile, volte] = stili[0];
+    righe.push(
+      `Stile preferito: ${stile} (${volte} volte su ${profilo.azioni}). Asseconda questo stile nelle conseguenze, ma ogni tanto sorprendi il giocatore con una situazione che lo costringe a cambiare registro.`
+    );
+  }
+
+  if (profilo.azioniLibere > 0) {
+    const media = Math.round(profilo.lunghezzaTotale / profilo.azioniLibere);
+    righe.push(
+      media >= 120
+        ? "Il giocatore scrive azioni lunghe e dettagliate: premia la sua creatività facendo reagire il mondo ad almeno un dettaglio specifico di ciò che ha scritto."
+        : "Il giocatore scrive azioni brevi e dirette: tieni il ritmo svelto e le scene concrete."
+    );
+  }
+
+  const intenti = Object.entries(profilo.intenti || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([nome]) => nome);
+  if (intenti.length) {
+    righe.push(`Tendenze ricorrenti del giocatore: ${intenti.join(", ")}.`);
+  }
+  return righe;
+}
+
+// ---------------------------------------------------------------------------
+// Memoria profonda degli NPC — "compagni che ricordano e crescono" (stile OOC)
+// ---------------------------------------------------------------------------
+
+/**
+ * Aggiunge un ricordo alla memoria di un NPC.
+ * I ricordi arrivano dai capitoli (deltaStato) e dalla Modalità Personaggio
+ * (le conversazioni dirette): fatti condivisi, promesse, impressioni che
+ * evolvono nel tempo.
+ */
+export function registraMemoriaNpc(stato, nomeNpc, { fatto = null, promessa = null, impressione = null, capitolo = null, argomento = null } = {}) {
+  const cercato = String(nomeNpc || "").toLowerCase();
+  const relazione = (stato.relazioni || []).find((r) => r.npc.toLowerCase() === cercato);
+  if (!relazione) return stato;
+
+  const memoria = relazione.memoria || (relazione.memoria = { fatti: [], promesse: [], impressione: "", conversazioni: 0, ultimaConversazione: null });
+
+  if (fatto) {
+    const testo = String(fatto).trim().slice(0, 180);
+    if (testo && !memoria.fatti.some((f) => f.toLowerCase() === testo.toLowerCase())) {
+      memoria.fatti = [...memoria.fatti, testo].slice(-MAX_FATTI_NPC);
+    }
+  }
+  if (promessa) {
+    const testo = String(promessa).trim().slice(0, 180);
+    if (testo && !memoria.promesse.some((p) => p.toLowerCase() === testo.toLowerCase())) {
+      memoria.promesse = [...memoria.promesse, testo].slice(-MAX_PROMESSE_NPC);
+    }
+  }
+  if (impressione) memoria.impressione = String(impressione).trim().slice(0, 220);
+
+  if (argomento) {
+    memoria.conversazioni += 1;
+    memoria.ultimaConversazione = {
+      capitolo: capitolo ?? stato.capitolo ?? 0,
+      argomento: String(argomento).slice(0, 80)
+    };
+  }
+  return stato;
+}
+
+// ---------------------------------------------------------------------------
+// Richiamo della memoria — i ricordi pertinenti riaffiorano al momento giusto
+// ---------------------------------------------------------------------------
+
+/** Estrae le parole significative da un testo (per il richiamo dei ricordi). */
+export function paroleRilevanti(testo) {
+  const parole = String(testo || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s']/gu, " ")
+    .split(/\s+/)
+    .filter((p) => p.length > 3 && !STOPWORD_MEMORIA.has(p));
+  return [...new Set(parole)];
+}
+
+/**
+ * Seleziona i ricordi più pertinenti rispetto all'azione del giocatore:
+ * sinossi dei capitoli, obiettivi aperti e memoria degli NPC. Sono questi i
+ * "ricordi che riaffiorano" iniettati nel prompt della scena corrente.
+ */
+export function richiamaMemoria(partita, testoAzione, max = 6) {
+  const chiavi = paroleRilevanti(testoAzione);
+  if (!chiavi.length) return [];
+  const stato = partita.stato;
+  const candidati = [];
+
+  const punteggio = (testo) => {
+    const basso = String(testo || "").toLowerCase();
+    return chiavi.reduce((punti, chiave) => (basso.includes(chiave) ? punti + 1 : punti), 0);
+  };
+
+  for (const voce of stato.sinossi || []) {
+    const p = punteggio(voce.testo);
+    if (p > 0) {
+      candidati.push({
+        punteggio: p,
+        fonte: voce.compresso ? `Capitoli ${voce.capitolo}-${voce.capitoloFine}` : `Capitolo ${voce.capitolo}`,
+        testo: voce.testo
+      });
+    }
+  }
+
+  for (const obiettivo of (stato.obiettivi || []).filter((o) => o.stato === "aperto")) {
+    const p = punteggio(obiettivo.testo);
+    if (p > 0) candidati.push({ punteggio: p + 1, fonte: "Obiettivo aperto", testo: obiettivo.testo });
+  }
+
+  for (const r of stato.relazioni || []) {
+    for (const fatto of r.memoria?.fatti || []) {
+      const p = punteggio(fatto);
+      if (p > 0) candidati.push({ punteggio: p + 1, fonte: `${r.npc} ricorda`, testo: fatto });
+    }
+    for (const promessa of r.memoria?.promesse || []) {
+      const p = punteggio(promessa);
+      if (p > 0) candidati.push({ punteggio: p + 2, fonte: `Promessa con ${r.npc}`, testo: promessa });
+    }
+  }
+
+  return candidati
+    .sort((a, b) => b.punteggio - a.punteggio)
+    .slice(0, max)
+    .map(({ fonte, testo }) => ({ fonte, testo }));
 }
 
 /**

@@ -9,7 +9,7 @@
 import { creaPartita, TONI_DISPONIBILI, COSTO_CAPITOLO } from "./stato/modello.js";
 import { digest, scheda } from "./stato/memoria.js";
 import { statoRicariche, ricarica, VALUTA, BONUS_BENVENUTO, MISSIONI_AL_GIORNO } from "./crediti/portafoglio.js";
-import { generaCapitoloNarrativo, ErroreGioco, modalitaMotore } from "./motore/narratore.js";
+import { generaCapitoloNarrativo, generaDialogoNarrativo, ErroreGioco, modalitaMotore } from "./motore/narratore.js";
 import { AMBIENTAZIONI, ARCHETIPI, TRATTI, NOMI_SUGGERITI } from "./motore/lessico.js";
 import { albero as alberoRelazioni, ASSI, QUADRANTI, TAPPE } from "./stato/relazioni.js";
 import { descriviIllustrazioni, generaScena, SCENE_PER_CAPITOLO, promptImmagine } from "./illustrazioni/scene.js";
@@ -93,6 +93,16 @@ export function vistaConfig() {
     nomiSuggeriti: NOMI_SUGGERITI,
     regoleParoleCapitolo: { min: 150, max: 200 },
     opzioniMinime: 3,
+    modalitaPersonaggio: {
+      attiva: true,
+      costoBattuta: 0,
+      descrizione:
+        "Modalità Personaggio (stile OOC): parla liberamente con ogni personaggio che hai incontrato. " +
+        "Ogni NPC risponde in prima persona, ricorda la vostra storia comune (fatti, promesse, impressioni) " +
+        "e il suo umore cambia con ciò che dici. Gratis e senza limiti, come nella Character Mode di OOC.",
+      profonditaMemoria: "fatti, promesse e impressioni conservati per ogni NPC",
+      adattamentoStile: "il Game Master osserva il tuo stile di gioco e vi adatta ritmo e sfide"
+    },
     illustrazioni: {
       attive: true,
       perCapitolo: SCENE_PER_CAPITOLO,
@@ -143,7 +153,16 @@ export function vistaPartita(partita, adesso = new Date()) {
     storia: partita.storia,
     capitoliTotali: partita.storia.length,
     alberoFiducia: alberoRelazioni(partita),
-    illustrazioniCorrenti: capitoloCorrente
+    illustrazioniCorrenti: capitoloCorrente,
+    // Profilo di stile del giocatore (stile OOC: l'IA si adatta a chi gioca)
+    profiloGiocatore: partita.stato.profiloGiocatore || null,
+    // Modalità Personaggio: quante battute hai scambiato con ogni NPC
+    dialoghi: Object.fromEntries(
+      Object.entries(partita.dialoghi || {}).map(([nome, conv]) => [
+        nome,
+        { messaggi: conv.messaggi?.length || 0, aggiornatoIl: conv.aggiornatoIl || null }
+      ])
+    )
   };
 }
 
@@ -247,6 +266,78 @@ const ROTTE = [
         });
         throw errore;
       }
+    }
+  },
+  {
+    metodo: "POST",
+    schema: ["api", "partite", ":id", "dialogo"],
+    gestore: async (ctx) => {
+      const partita = await archivio.leggi(ctx.params.id);
+      const inizio = Date.now();
+      try {
+        const { battuta, relazione, note } = await generaDialogoNarrativo({
+          partita,
+          npc: ctx.corpo?.npc,
+          testo: ctx.corpo?.testo,
+          adesso: ctx.adesso
+        });
+        await archivio.salva(partita);
+        await playtest.registra("dialogo-battuta", {
+          saga: partita.id,
+          npc: battuta.npc,
+          parole: battuta.parole,
+          motore: battuta.provenienza,
+          millisecondi: Date.now() - inizio
+        });
+        return {
+          battuta,
+          relazione: {
+            npc: relazione.npc,
+            ruolo: relazione.ruolo,
+            vincolo: relazione.vincolo,
+            tensione: relazione.tensione,
+            rispetto: relazione.rispetto,
+            quadrante: relazione.quadrante
+          },
+          memoria: relazione.memoria || { fatti: [], promesse: [], impressione: "" },
+          note,
+          partita: vistaPartita(partita, ctx.adesso)
+        };
+      } catch (errore) {
+        await playtest.registra("dialogo-rifiutato", {
+          saga: partita.id,
+          motivo: errore?.codice || errore?.name || "ERRORE",
+          millisecondi: Date.now() - inizio
+        });
+        throw errore;
+      }
+    }
+  },
+  {
+    metodo: "GET",
+    schema: ["api", "partite", ":id", "dialogo", ":npc"],
+    gestore: async (ctx) => {
+      const partita = await archivio.leggi(ctx.params.id);
+      const cercato = decodeURIComponent(ctx.params.npc).toLowerCase();
+      const relazione = (partita.stato.relazioni || []).find((r) => r.npc.toLowerCase() === cercato);
+      if (!relazione) {
+        throw new ErroreGioco("Non hai ancora incontrato questo personaggio.", "NPC_NON_TROVATO", 404);
+      }
+      const conversazione = partita.dialoghi?.[relazione.npc] || { messaggi: [], aggiornatoIl: null };
+      return {
+        npc: relazione.npc,
+        gratuita: true,
+        battute: conversazione.messaggi,
+        aggiornatoIl: conversazione.aggiornatoIl,
+        memoria: relazione.memoria || { fatti: [], promesse: [], impressione: "" },
+        relazione: {
+          ruolo: relazione.ruolo,
+          vincolo: relazione.vincolo,
+          tensione: relazione.tensione,
+          rispetto: relazione.rispetto,
+          quadrante: relazione.quadrante
+        }
+      };
     }
   },
   {

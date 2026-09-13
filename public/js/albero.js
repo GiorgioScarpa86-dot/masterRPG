@@ -11,7 +11,7 @@
  * su desktop e su telefono, senza dipendenze.
  */
 
-import { $, crea, svuota, apriModale, numeroIt } from "./ui.js";
+import { $, crea, svuota, apriModale, chiudiModale, numeroIt } from "./ui.js";
 
 const LATO = 340;              // lato logico del piano dell'albero
 const MARGINE = 34;
@@ -219,7 +219,7 @@ function radar(nodo) {
 }
 
 /** Scheda completa di un NPC, mostrata in un modale. */
-export function mostraSchedaNpc(nodo) {
+export function mostraSchedaNpc(nodo, { onParla = null } = {}) {
   const contenitore = svuota($("#contenuto-npc"));
   $("#titolo-npc").textContent = nodo.npc;
 
@@ -292,6 +292,26 @@ export function mostraSchedaNpc(nodo) {
       }));
     }
     contenitore.appendChild(tabella);
+  }
+
+  // Modalità Personaggio (stile OOC): conversa direttamente con questo NPC
+  if (onParla) {
+    const azioni = crea("div", { classe: "npc-azioni" });
+    azioni.appendChild(crea("button", {
+      type: "button",
+      classe: "btn primary largo",
+      testo: `💬 Parla con ${nodo.npc}`,
+      title: "Modalità Personaggio: chat libera e gratuita con questo personaggio",
+      onclick: () => {
+        chiudiModale("modale-npc");
+        onParla(nodo.npc);
+      }
+    }));
+    azioni.appendChild(crea("p", {
+      classe: "aiuto-blocco piccolo",
+      testo: "Modalità Personaggio: risponde in prima persona, ricorda la vostra storia ed è gratis."
+    }));
+    contenitore.appendChild(azioni);
   }
 
   apriModale("modale-npc");

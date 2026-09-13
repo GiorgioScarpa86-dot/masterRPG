@@ -40,7 +40,15 @@ Tutto lo stato di una partita vive in un unico documento JSON salvato in `dati/p
     "relazioni": [
       { "npc": "Mira", "ruolo": "Alleata", "fiducia": 62,
         "nota": "Ti ha salvato nella foresta.", "ultimoIncontro": 3,
-        "aspetto": "ragazza dai capelli color neve", "tic": "sorride prima di mentire" }
+        "aspetto": "ragazza dai capelli color neve", "tic": "sorride prima di mentire",
+        // Memoria profonda (stile OOC): seminata dai capitoli e dalle conversazioni
+        "memoria": {
+          "fatti": ["Ricorda la sincerità che Rei le ha mostrato parlando con lei."],
+          "promesse": ["Promessa: torneremo alle Rovine di Lumen insieme."],
+          "impressione": "Dopo queste parole, sente il protagonista più vicino.",
+          "conversazioni": 3,
+          "ultimaConversazione": { "capitolo": 3, "argomento": "la verità sul Marchio" }
+        } }
     ],
     "sinossi": [ { "capitolo": 1, "testo": "Ti sei risvegliato nel Bosco di Aster senza ricordi." } ],
     "obiettivi": [ { "testo": "Scoprire l'origine del Marchio", "stato": "aperto" } ],
@@ -48,7 +56,27 @@ Tutto lo stato di una partita vive in un unico documento JSON salvato in `dati/p
     "titoli": [ "Il Risveglio", "Il Marchio", "Il Sussurro della Lama di Vetro" ],
     "arco": { "nome": "Risveglio del Marchio", "beat": "confronto", "capitoloBeat": 2 },
     "ultimaScelta": "Ho chiamato Mira per nome chiedendole la verità",
-    "contatori": { "combattimenti": 1, "dialoghi": 4, "scoperte": 2 }
+    "contatori": { "combattimenti": 1, "dialoghi": 4, "scoperte": 2, "battute": 6 },
+    // Profilo di stile del giocatore: l'IA lo osserva e vi adatta la narrazione
+    "profiloGiocatore": {
+      "azioni": 12, "scelteRapide": 7, "azioniLibere": 5,
+      "stili": { "audace": 3, "prudente": 1, "astuta": 2, "empatica": 1 },
+      "intenti": { "dialogo": 4, "combattimento": 3 },
+      "lunghezzaTotale": 610
+    }
+  },
+
+  // Modalità Personaggio (stile OOC): conversazioni dirette con gli NPC
+  "dialoghi": {
+    "Mira": {
+      "npc": "Mira",
+      "messaggi": [
+        { "da": "tu", "testo": "Chi sei davvero?", "creatoIl": "…" },
+        { "da": "Mira", "testo": "«…»", "emozione": "calore", "motore": "locale", "creatoIl": "…" }
+      ],                                       // ultimi 40 messaggi per personaggio
+      "testiUsati": [],
+      "aggiornatoIl": "2026-09-12T10:02:11.000Z"
+    }
   },
 
   "economia": {
@@ -126,3 +154,6 @@ Tutto lo stato di una partita vive in un unico documento JSON salvato in `dati/p
 6. `inventario` è privo di duplicati: aggiungere un oggetto già posseduto incrementa la quantità.
 7. `movimenti` è ordinato cronologicamente e contiene almeno il bonus di benvenuto.
 8. Ogni partita salvata è autosufficiente: il file può essere copiato su un'altra macchina e ripreso.
+9. La Modalità Personaggio (`dialoghi`) è **gratuita**: non modifica `economia` e non avanza `stato.capitolo`;
+   sposta solo gli assi delle relazioni (variazioni ±12) e alimenta la memoria profonda degli NPC.
+10. Ogni conversazione conserva al massimo 40 messaggi; ogni NPC al massimo 8 fatti e 4 promesse.

@@ -11,6 +11,7 @@ import { creaScheda } from "./scheda.js";
 import { creaPortafoglio } from "./portafoglio.js";
 import { creaIllustrazioni } from "./illustrazioni.js";
 import { creaPlaytest } from "./playtest.js";
+import { creaDialogo } from "./dialogo.js";
 
 const CHIAVE_ULTIMA_SAGA = "masterrpg.ultimaSaga";
 
@@ -21,6 +22,8 @@ window.__impostazioni = { senzaAnimazioni: false };
 const stato = { config: null, partita: null, inAttesa: false };
 
 // ─────────────────────────── Moduli ───────────────────────────
+const dialogo = creaDialogo({ onPartitaAggiornata: (partita) => applicaPartita(partita) });
+
 const scheda = creaScheda({
   onApriCapitolo: (capitolo) => {
     capitoloModale.disegnaModale(capitolo);
@@ -28,7 +31,8 @@ const scheda = creaScheda({
   },
   onApriIllustrazioni: (capitolo) => illustrazioni.apriCapitolo(capitolo),
   onMostraMemoria: () => apriMemoria(),
-  onApriPortafoglio: () => portafoglio.apri()
+  onApriPortafoglio: () => portafoglio.apri(),
+  onParlaConNpc: (npc) => dialogo.apri(npc)
 });
 
 const playtest = creaPlaytest({ api });
@@ -289,6 +293,7 @@ async function avvia() {
   scheda.collega();
   illustrazioni.collega();
   playtest.collega();
+  dialogo.collega();
 
   // Scorciatoie da tastiera: ← → nella galleria, Esc chiude i modali
   $("#btn-galleria").addEventListener("click", () => {
