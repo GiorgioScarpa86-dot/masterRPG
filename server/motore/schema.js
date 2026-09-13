@@ -133,6 +133,10 @@ export function normalizzaDelta(delta = {}) {
         aspetto: stringaPulita(r?.aspetto, 120),
         tic: stringaPulita(r?.tic, 120),
         tappa: stringaPulita(r?.tappa, 40) || null,
+        // Memoria profonda dell'NPC (stile OOC): ricordi seminati dal capitolo
+        fatto: stringaPulita(r?.fatto, 180) || null,
+        promessa: stringaPulita(r?.promessa, 180) || null,
+        impressione: stringaPulita(r?.impressione, 220) || null,
         ...(deltaVincolo !== undefined ? { deltaVincolo } : {}),
         ...(deltaTensione !== undefined ? { deltaTensione } : {}),
         ...(deltaRispetto !== undefined ? { deltaRispetto } : {}),
@@ -223,5 +227,70 @@ export function normalizzaCapitolo(grezzo, { numero, provenienza = "locale", azi
     provenienza,
     parole,
     note: [...note, ...(Array.isArray(dati.note) ? dati.note.map((n) => stringaPulita(n, 160)) : [])].filter(Boolean)
+  };
+}
+
+/**
+ * Normalizza la battuta di un NPC in Modalità Personaggio (stile OOC).
+ * Accetta il JSON del modello oppure, come rete di sicurezza, testo semplice:
+ * la conversazione non si blocca mai.
+ */
+export function normalizzaBattuta(grezzo, { npc = "il personaggio", provenienza = "locale" } = {}) {
+  const note = [];
+  let dati = estraiJson(grezzo);
+
+  if (!dati && typeof grezzo === "string") {
+    dati = riparazioneBestEffort(grezzo);
+    if (dati) note.push("Il JSON del modello è stato riparato automaticamente.");
+  }
+
+  // Rete di sicurezza: testo semplice → battuta ricostruita
+  if (!dati || typeof dati !== "object") {
+    const testoPulito = stringaPulita(grezzo, 1600);
+    if (contaParole(testoPulito) >= 5) {
+      note.push("Risposta del modello usata come testo semplice.");
+      return {
+        npc,
+        testo: testoPulito,
+        emozione: "",
+        deltaVincolo: 0,
+        deltaTensione: 0,
+        deltaRispetto: 0,
+        fatto: null,
+        promessa: null,
+        impressione: null,
+        provenienza,
+        parole: contaParole(testoPulito),
+        note
+      };
+    }
+    const errore = new Error("La battuta generata non è utilizzabile.");
+    errore.codice = "BATTUTA_NON_VALIDA";
+    throw errore;
+  }
+
+  const testo = stringaPulita(dati.testo || dati.battuta || dati.contenuto || dati.messaggio, 1600);
+  if (contaParole(testo) < 5) {
+    const errore = new Error("La battuta generata è troppo breve o vuota.");
+    errore.codice = "BATTUTA_NON_VALIDA";
+    throw errore;
+  }
+
+  const parole = contaParole(testo);
+  if (parole > 140) note.push(`Battuta più lunga del previsto (${parole} parole).`);
+
+  return {
+    npc,
+    testo,
+    emozione: stringaPulita(dati.emozione, 40),
+    deltaVincolo: limita(dati.deltaVincolo, -12, 12, 0),
+    deltaTensione: limita(dati.deltaTensione, -12, 12, 0),
+    deltaRispetto: limita(dati.deltaRispetto, -12, 12, 0),
+    fatto: stringaPulita(dati.fatto, 180) || null,
+    promessa: stringaPulita(dati.promessa, 180) || null,
+    impressione: stringaPulita(dati.impressione, 220) || null,
+    provenienza,
+    parole,
+    note
   };
 }

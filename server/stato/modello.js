@@ -6,6 +6,7 @@
 import { AMBIENTAZIONI } from "../motore/lessico.js";
 import { portafoglioIniziale } from "../crediti/portafoglio.js";
 import { applicaAssi, quadrante, TAPPE } from "./relazioni.js";
+import { profiloIniziale } from "./memoria.js";
 
 export const COSTO_CAPITOLO = 10;
 export const BONUS_BENVENUTO = 1000;
@@ -137,11 +138,15 @@ export function creaPartita({ ambientazione, tono, protagonista, titoloSaga } = 
       titoli: [],
       arco: { nome: `Arco di ${prot.nome}`, beat: "apertura", capitoloBeat: 0 },
       ultimaScelta: null,
-      contatori: { combattimenti: 0, dialoghi: 0, scoperte: 0 },
-      testiUsati: []
+      contatori: { combattimenti: 0, dialoghi: 0, scoperte: 0, battute: 0 },
+      testiUsati: [],
+      // Profilo di stile del giocatore: l'IA lo osserva e vi si adatta (stile OOC)
+      profiloGiocatore: profiloIniziale()
     },
     economia: portafoglioIniziale(adesso),
     storia: [],
+    // Modalità Personaggio (stile OOC): conversazioni dirette con gli NPC
+    dialoghi: {},
     memoria: {
       riassuntoCompresso: "",
       paroleTotali: 0,

@@ -7,6 +7,13 @@ L'utente sceglie un'ambientazione (o ne inventa una), crea il proprio protagonis
 a capitoli: l'**IA Game Master** scrive un capitolo per volta (150–200 parole), propone 3–4 scelte
 rapide e accetta qualsiasi **Azione Personalizzata** scritta liberamente dal giocatore.
 
+L'intelligenza generativa è modellata su **OOC: The Playable Anime** (l'app di Wrtn su Play Store):
+il mondo **reagisce a ogni parola** scritta dal giocatore, gli NPC hanno una **memoria profonda**
+(fatti, promesse, impressioni che evolvono), l'IA **si adatta allo stile** di chi gioca e ogni
+personaggio incontrato è disponibile per una **chat libera in prima persona** — la *Modalità
+Personaggio*, gratuita e senza limiti, come la Character Mode di OOC. Dettagli in
+**[`docs/07-intelligenza-stile-ooc.md`](docs/07-intelligenza-stile-ooc.md)**.
+
 Ogni capitolo porta con sé **cinque illustrazioni** generate dal testo, ogni personaggio vive in un
 **albero di fiducia a tre assi**, e il gioco è pronto per un **playtest reale** con registrazione
 degli eventi e modulo di parere.
@@ -107,10 +114,20 @@ Sette ambientazioni, sette ore del giorno, nessun costo:
    dalla combinazione nascono quattro quadranti narrativi (*Alleanza, Rivalità, Crocevia, Ostilità*),
    otto **tappe** del legame e uno storico capitolo per capitolo, mostrato in un piano cartesiano
    interattivo (`server/stato/relazioni.js`, `public/js/albero.js`).
-7. **Giocabile da telefono** — punti di rottura a 1080/980/900/720/620/420 px, pannello a schede,
+7. **Intelligenza in stile OOC** — il Game Master segue le regole di *OOC: The Playable Anime*:
+   reagisce a **ogni parola** scritta dal giocatore, non parla mai al posto del protagonista e usa i
+   **ricordi pertinenti** della scena. Ogni NPC conserva una **memoria profonda** (fatti, promesse,
+   impressioni che evolvono) e l'IA osserva il **profilo di stile** del giocatore per adattare ritmo
+   e sfide (`server/motore/prompt.js`, `server/stato/memoria.js`,
+   [`docs/07-intelligenza-stile-ooc.md`](docs/07-intelligenza-stile-ooc.md)).
+8. **Modalità Personaggio** — come nella Character Mode di OOC: **chat libera, gratuita e senza
+   limiti** con ogni personaggio già incontrato. L'NPC risponde in prima persona, ricorda la vostra
+   storia comune e il suo umore (assi dell'albero di fiducia) cambia con ciò che dici
+   (`server/motore/narratore.js → generaDialogoNarrativo`, `public/js/dialogo.js`).
+9. **Giocabile da telefono** — punti di rottura a 1080/980/900/720/620/420 px, pannello a schede,
    modali a tutta larghezza, bersagli tattili ≥ 44 px, nessuno scorrimento orizzontale.
-8. **Kit di playtest** — registro eventi locale (`dati/playtest/`), modulo di parere in quattro
-   domande, riepilogo da terminale con suggerimenti automatici (`npm run playtest:riepilogo`).
+10. **Kit di playtest** — registro eventi locale (`dati/playtest/`), modulo di parere in quattro
+    domande, riepilogo da terminale con suggerimenti automatici (`npm run playtest:riepilogo`).
 
 ### L'albero di fiducia in azione
 
@@ -129,15 +146,15 @@ masterRPG/
 │   ├── index.js                 # server HTTP zero-dipendenze: statici + API REST
 │   ├── api.js                   # rotte REST
 │   ├── motore/
-│   │   ├── narratore.js         # orchestratore: provider, validazione, applicazione stato
-│   │   ├── prompt.js            # costruzione del prompt del Game Master (iniezione memoria)
+│   │   ├── narratore.js         # orchestratore: capitoli + Modalità Personaggio (dialogo NPC)
+│   │   ├── prompt.js            # prompt v2.0 stile OOC: Game Master + personaggi in prima persona
 │   │   ├── provider_llm.js      # client OpenAI-compatibile (opzionale)
-│   │   ├── motore_locale.js     # generatore narrativo procedurale italiano (fallback offline)
+│   │   ├── motore_locale.js     # generatore procedurale italiano (capitoli + battute NPC offline)
 │   │   ├── lessico.js           # banche lessicali per ambientazione + stile anime
-│   │   └── schema.js            # normalizzazione/validazione del capitolo
+│   │   └── schema.js            # normalizzazione/validazione di capitoli e battute
 │   ├── stato/
 │   │   ├── modello.js           # creazione e mutazione dello stato di partita
-│   │   ├── memoria.js           # State Engine: sinossi, relazioni, inventario, digest
+│   │   ├── memoria.js           # State Engine: sinossi, digest, memoria profonda NPC, profilo giocatore
 │   │   ├── relazioni.js         # albero di fiducia: assi, quadranti, tappe, storico
 │   │   └── archivio.js          # persistenza su file JSON (dati/partite/*.json)
 │   ├── illustrazioni/
@@ -152,7 +169,7 @@ masterRPG/
 ├── public/                      # interfaccia (nessun build step)
 │   ├── index.html
 │   ├── css/style.css
-│   └── js/{app,api,setup,capitolo,scheda,albero,illustrazioni,portafoglio,playtest}.js
+│   └── js/{app,api,setup,capitolo,scheda,albero,dialogo,illustrazioni,portafoglio,playtest}.js
 ├── strumenti/                   # collaudi automatici e verifica statica
 │   ├── avvia-playtest.js        # avvio guidato di una sessione di prova
 │   ├── riepilogo-playtest.js    # numeri e pareri della sessione
@@ -188,6 +205,8 @@ Documentazione dei flussi: **[`docs/01-flussi-di-lavoro.md`](docs/01-flussi-di-l
 | `GET` | `/api/partite` | Elenco delle saghe salvate. |
 | `GET` | `/api/partite/:id` | Stato completo della partita. |
 | `POST` | `/api/partite/:id/capitolo` | Genera il capitolo successivo (costo 10 Token Storia). |
+| `POST` | `/api/partite/:id/dialogo` | **Modalità Personaggio**: `{ npc, testo }` — l'NPC risponde in prima persona. Gratuito, aggiorna memoria e assi. |
+| `GET` | `/api/partite/:id/dialogo/:npc` | Cronologia della conversazione con un NPC + la sua memoria profonda. |
 | `POST` | `/api/partite/:id/ricarica` | Ricarica rapida gratuita: `{ modalita: "missione" \| "spot" \| "emergenza" }`. |
 | `GET` | `/api/partite/:id/memoria` | Digest della memoria iniettata nel prompt (trasparenza dello State Engine). |
 | `GET` | `/api/partite/:id/esporta` | Esporta la saga completa in Markdown. |
@@ -217,6 +236,8 @@ I singoli collaudi, se servono da soli (il server deve essere attivo):
 ```bash
 npm run prova:motore         # 150 capitoli: lunghezza 150-200 parole, 3-4 scelte,
                              # dialoghi bilanciati, sinossi, crediti, ricarica d'emergenza
+npm run prova:dialogo        # intelligenza stile OOC: Modalità Personaggio gratuita,
+                             # memoria profonda, profilo giocatore, assi mossi dalla chat
 npm run prova:illustrazioni  # 5 scene per capitolo, determinismo, XML valido,
                              # tutte le ambientazioni, assi dell'albero, rotte REST
 npm run prova:compatibilita  # Firefox/Chrome/Safari: versioni minime, tipi MIME,
@@ -242,6 +263,7 @@ Esito dell'ultima esecuzione — saga di 150 capitoli generata in 2 secondi:
 | Collaudo | Esito |
 |---|---|
 | `prova-motore.js 150` | **1076/1076** verifiche · 28 000+ parole · 460 battute · 5 NPC · 6 luoghi |
+| `prova-dialogo.js` | **27/27** verifiche · Modalità Personaggio gratuita · memoria profonda · profilo del giocatore |
 | `prova-illustrazioni.js` | **16 444** verifiche · 60 scene distinte · 7 ambientazioni × 7 momenti · 0,5 ms per scena |
 | `prova-compatibilita.js` | **52/52** verifiche su Firefox, Chrome e Safari (versioni minime, MIME, SVG) |
 | `prova-mobile.js` | **39/39** verifiche sul layout da telefono |

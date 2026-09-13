@@ -12,6 +12,7 @@
     "playtest:riepilogo": "node strumenti/riepilogo-playtest.js",
     "prova": "node strumenti/prova-motore.js 100",
     "prova:motore": "node strumenti/prova-motore.js 150",
+    "prova:dialogo": "node strumenti/prova-dialogo.js",
     "prova:illustrazioni": "node strumenti/prova-illustrazioni.js",
     "prova:mobile": "node strumenti/prova-mobile.js",
     "prova:interfaccia": "node strumenti/prova-interfaccia.js",

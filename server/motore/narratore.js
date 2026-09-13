@@ -13,13 +13,14 @@
  * esterno fallisce, il capitolo viene comunque consegnato dal motore locale.
  */
 
-import { generaCapitolo as generaCapitoloLocale } from "./motore_locale.js";
-import { costruisciPrompt } from "./prompt.js";
+import { generaCapitolo as generaCapitoloLocale, generaBattuta as generaBattutaLocale, analizzaIntento } from "./motore_locale.js";
+import { costruisciPrompt, costruisciPromptDialogo } from "./prompt.js";
 import { configurazioneLLM, generaConLLM } from "./provider_llm.js";
-import { normalizzaCapitolo } from "./schema.js";
+import { normalizzaCapitolo, normalizzaBattuta } from "./schema.js";
 import { addebita, puoGenerare, COSTO_CAPITOLO, VALUTA } from "../crediti/portafoglio.js";
 import { applicaDelta, avanzaArco, chiudiObiettivo } from "../stato/modello.js";
-import { aggiornaMemoria, digest } from "../stato/memoria.js";
+import { aggiornaMemoria, aggiornaProfiloGiocatore, digest, registraMemoriaNpc } from "../stato/memoria.js";
+import { applicaAssi } from "../stato/relazioni.js";
 
 /** Errore di gioco con codice e stato HTTP, usato dalle rotte. */
 export class ErroreGioco extends Error {
@@ -61,6 +62,15 @@ export async function generaCapitoloNarrativo({ partita, azione = null, adesso =
       400
     );
   }
+
+  // Profilo del giocatore (stile OOC): l'IA osserva lo stile di chi gioca e
+  // vi si adatta. L'osservazione avviene PRIMA del prompt, così lo stile di
+  // quest'azione orienta già la scena corrente.
+  const intentoAzione = azioneNormalizzata
+    ? analizzaIntento(azioneNormalizzata.testo, azioneNormalizzata.tipoScelta)
+    : null;
+  aggiornaProfiloGiocatore(partita.stato, azioneNormalizzata, intentoAzione);
+
   const { sistema, utente, memoriaDigest } = costruisciPrompt({ partita, azione: azioneNormalizzata, numero });
 
   // --- Generazione ---------------------------------------------------------
@@ -113,6 +123,19 @@ export async function generaCapitoloNarrativo({ partita, azione = null, adesso =
   // --- Applicazione dello stato --------------------------------------------
   const delta = { ...capitolo.deltaStato, testiConsumati: capitolo.testiConsumati || [] };
   applicaDelta(partita.stato, delta);
+
+  // Memoria profonda degli NPC (stile OOC): i fatti, le promesse e le
+  // impressioni seminati dal capitolo diventano ricordi permanenti.
+  for (const rel of delta.relazioni || []) {
+    if (rel.fatto || rel.promessa || rel.impressione) {
+      registraMemoriaNpc(partita.stato, rel.npc, {
+        fatto: rel.fatto,
+        promessa: rel.promessa,
+        impressione: rel.impressione,
+        capitolo: numero
+      });
+    }
+  }
 
   if (delta.obiettivoChiuso) chiudiObiettivo(partita.stato, delta.obiettivoChiuso);
   avanzaArco(partita.stato, delta.beat);
@@ -171,4 +194,141 @@ export function normalizzaAzione(azione) {
     throw new ErroreGioco("L'azione personalizzata deve contenere almeno 3 caratteri.", "AZIONE_NON_VALIDA", 400);
   }
   return { tipo: "libera", testo, opzioneId: null, tipoScelta: null };
+}
+
+// ---------------------------------------------------------------------------
+// Modalità Personaggio — conversazione diretta con un NPC (stile OOC)
+// ---------------------------------------------------------------------------
+
+/**
+ * Genera la risposta in prima persona di un NPC a un messaggio del giocatore.
+ * È la Character Mode di OOC: chat libera, gratuita, senza blocchi. Se il
+ * provider esterno non è disponibile risponde il motore locale.
+ * @returns {{battuta:object, relazione:object, partita:object, note:string[]}}
+ */
+export async function generaDialogoNarrativo({ partita, npc, testo, adesso = new Date(), forzaMotore = null }) {
+  if (!partita.storia?.length) {
+    throw new ErroreGioco(
+      "Prima di parlare con qualcuno, scrivi il proemio: è lì che incontri i primi personaggi.",
+      "SAGA_SENZA_CAPITOLI",
+      400
+    );
+  }
+
+  const nomeNpc = String(npc || "").trim();
+  const cercato = nomeNpc.toLowerCase();
+  const relazione = (partita.stato.relazioni || []).find((r) => r.npc.toLowerCase() === cercato);
+  if (!relazione) {
+    throw new ErroreGioco(
+      `Non conosci ancora nessun personaggio di nome «${nomeNpc}»: lo incontrerai nel corso della storia.`,
+      "NPC_NON_TROVATO",
+      404
+    );
+  }
+
+  const messaggio = normalizzaMessaggio(testo);
+  if (!messaggio) {
+    throw new ErroreGioco(
+      "Scrivi almeno 2 caratteri per parlare con questo personaggio.",
+      "MESSAGGIO_NON_VALIDO",
+      400
+    );
+  }
+
+  const { sistema, utente } = costruisciPromptDialogo({ partita, relazione, messaggio });
+
+  // --- Generazione ---------------------------------------------------------
+  const config = configurazioneLLM();
+  const note = [];
+  let grezzo = null;
+  let provenienza = "motore-locale";
+
+  const usaLLM = forzaMotore ? forzaMotore === "llm" : config.attiva;
+  if (usaLLM && config.attiva) {
+    try {
+      const risposta = await generaConLLM({ sistema, utente, configurazione: config });
+      grezzo = risposta.contenuto;
+      provenienza = risposta.provenienza;
+    } catch (errore) {
+      note.push(`Personaggio non raggiungibile (${errore.message}). Risponde la voce locale.`);
+      grezzo = null;
+    }
+  }
+
+  let battuta;
+  if (grezzo) {
+    try {
+      battuta = normalizzaBattuta(grezzo, { npc: relazione.npc, provenienza });
+    } catch (errore) {
+      note.push(`Risposta non utilizzabile (${errore.message}). Subentra la voce locale.`);
+      grezzo = null;
+    }
+  }
+  if (!grezzo) {
+    const locale = generaBattutaLocale({ partita, relazione, messaggio });
+    battuta = normalizzaBattuta(locale, { npc: relazione.npc, provenienza: "motore-locale" });
+    battuta.testiConsumati = locale.meta?.testiConsumati || [];
+    provenienza = "motore-locale";
+  }
+
+  // --- Applicazione: assi, memoria profonda, cronologia --------------------
+  const variazione = {
+    vincolo: battuta.deltaVincolo || 0,
+    tensione: battuta.deltaTensione || 0,
+    rispetto: battuta.deltaRispetto || 0
+  };
+  if (variazione.vincolo || variazione.tensione || variazione.rispetto) {
+    applicaAssi(relazione, variazione, partita.stato.capitolo || 1);
+  }
+  registraMemoriaNpc(partita.stato, relazione.npc, {
+    fatto: battuta.fatto,
+    promessa: battuta.promessa,
+    impressione: battuta.impressione,
+    capitolo: partita.stato.capitolo || 1,
+    argomento: messaggio
+  });
+  aggiungiScambio(partita, relazione, messaggio, battuta, adesso);
+
+  partita.stato.contatori.battute = (partita.stato.contatori.battute || 0) + 1;
+  partita.aggiornataIl = adesso.toISOString();
+
+  return {
+    battuta: { ...battuta, npc: relazione.npc, creatoIl: adesso.toISOString() },
+    relazione,
+    partita,
+    note: [...note, ...(battuta.note || [])]
+  };
+}
+
+/** Valida il messaggio del giocatore nella Modalità Personaggio. */
+export function normalizzaMessaggio(testo) {
+  const pulito = String(testo || "").replace(/\s+/g, " ").trim().slice(0, 400);
+  return pulito.length >= 2 ? pulito : null;
+}
+
+/** Aggiunge lo scambio (giocatore + NPC) alla cronologia della conversazione. */
+function aggiungiScambio(partita, relazione, messaggio, battuta, adesso) {
+  partita.dialoghi = partita.dialoghi || {};
+  const chiave = relazione.npc;
+  const conversazione = partita.dialoghi[chiave] || (partita.dialoghi[chiave] = {
+    npc: chiave,
+    messaggi: [],
+    testiUsati: [],
+    aggiornatoIl: null
+  });
+
+  const iso = adesso.toISOString();
+  conversazione.messaggi.push({ da: "tu", testo: messaggio, creatoIl: iso });
+  conversazione.messaggi.push({
+    da: relazione.npc,
+    testo: battuta.testo,
+    emozione: battuta.emozione || null,
+    motore: battuta.provenienza === "motore-locale" ? "locale" : "llm",
+    creatoIl: iso
+  });
+  // Le conversazioni restano leggere: si conservano gli ultimi 40 messaggi
+  conversazione.messaggi = conversazione.messaggi.slice(-40);
+  conversazione.testiUsati = [...(conversazione.testiUsati || []), ...(battuta.testiConsumati || [])].slice(-40);
+  conversazione.aggiornatoIl = iso;
+  return conversazione;
 }

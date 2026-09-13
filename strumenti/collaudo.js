@@ -8,7 +8,8 @@
  *
  * Comportamento:
  *   · avvia da sé il server su una porta libera se non è già attivo;
- *   · esegue verifica statica, layout da telefono, codice QR, illustrazioni, motore;
+ *   · esegue verifica statica, layout da telefono, codice QR, illustrazioni,
+ *     motore e il collaudo dell'intelligenza in stile OOC (dialogo e memoria);
  *   · esegue i due collaudi con jsdom se la libreria è disponibile, altrimenti
  *     li salta con un avviso (jsdom serve solo ai collaudi, mai per giocare);
  *   · alla fine stampa un riepilogo e restituisce 0 solo se tutto è passato.
@@ -130,6 +131,7 @@ await passo("Layout da telefono (statico)", process.execPath, ["strumenti/prova-
 await passo("Codice QR per il telefono", process.execPath, ["strumenti/prova-qr.js"]);
 await passo("Illustrazioni di scena e albero di fiducia", process.execPath, ["strumenti/prova-illustrazioni.js", String(VELOCE ? 6 : 12)]);
 await passo(`Motore narrativo (${CAPITOLI} capitoli)`, process.execPath, ["strumenti/prova-motore.js", String(CAPITOLI)]);
+await passo("Intelligenza in stile OOC (dialogo e memoria)", process.execPath, ["strumenti/prova-dialogo.js", BASE]);
 await passo("Garanzia anti-blocco dei crediti", process.execPath, ["strumenti/prova-anticrisi.js"], percorsoJsdom ? { JSDOM_PATH: percorsoJsdom } : {});
 await passo("Interfaccia completa pilotata (jsdom)", process.execPath, ["strumenti/prova-interfaccia.js"], percorsoJsdom ? { JSDOM_PATH: percorsoJsdom } : {});
 

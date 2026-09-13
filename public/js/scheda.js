@@ -27,7 +27,7 @@ const RARITA_CLASSE = {
   leggendario: "rarita-leggendario"
 };
 
-export function creaScheda({ onApriCapitolo, onApriIllustrazioni }) {
+export function creaScheda({ onApriCapitolo, onApriIllustrazioni, onParlaConNpc }) {
   let partita = null;
   let schedaAttiva = localStorage.getItem("masterrpg.scheda") || "personaggio";
 
@@ -108,7 +108,7 @@ export function creaScheda({ onApriCapitolo, onApriIllustrazioni }) {
     for (const nodo of contenitore.querySelectorAll(".nodo-albero")) {
       const dati = albero.nodi.find((n) => n.npc === nodo.dataset.npc);
       if (!dati) continue;
-      const apri = () => mostraSchedaNpc(dati);
+      const apri = () => mostraSchedaNpc(dati, { onParla: onParlaConNpc });
       nodo.addEventListener("click", apri);
       nodo.addEventListener("keydown", (evento) => {
         if (evento.key === "Enter" || evento.key === " ") {
@@ -129,7 +129,7 @@ export function creaScheda({ onApriCapitolo, onApriIllustrazioni }) {
         crea("button", {
           type: "button",
           classe: "relazione-bottone",
-          onclick: () => mostraSchedaNpc(nodo)
+          onclick: () => mostraSchedaNpc(nodo, { onParla: onParlaConNpc })
         }, [
           crea("div", { classe: "riga-alta" }, [
             crea("span", { classe: "nome-npc", testo: nodo.npc }),
@@ -157,7 +157,14 @@ export function creaScheda({ onApriCapitolo, onApriIllustrazioni }) {
             ])
           ]),
           nodo.nota ? crea("p", { classe: "nota", testo: nodo.nota }) : null
-        ])
+        ]),
+        crea("button", {
+          type: "button",
+          classe: "btn piccolo ghost btn-parla-npc",
+          testo: "💬 Parlaci",
+          title: `Apri la Modalità Personaggio: conversa con ${nodo.npc}`,
+          onclick: () => onParlaConNpc?.(nodo.npc)
+        })
       ]));
     }
   }
